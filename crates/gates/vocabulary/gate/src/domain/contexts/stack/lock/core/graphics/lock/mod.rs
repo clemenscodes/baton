@@ -276,6 +276,21 @@ impl StackLockCoreGraphicsLockContext {
             let definition = "The path of the cgroup of the helper below the tree of baton, /baton/host.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Yield", "Presence"];
+            let definition = "Whether the default owner of a lock yields it to every acquisition of another application, without --force.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Maybe", "Yielding", "Owner"];
+            let definition = "The default owner of a lock when it yields, or nothing.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Record", "Yield", "Presence"];
+            let definition = "To record whether the default owner yields, which holds only while the lock has a default owner.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

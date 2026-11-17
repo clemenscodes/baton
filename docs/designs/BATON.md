@@ -74,6 +74,12 @@ is locked out by name.
 - A lock may name one eligible application as its default owner, which holds it whenever no other
   does. On a system with a single GPU that is the desktop, so the desktop keeps its GPU until another
   application acquires it and gets it back on the release.
+- A default owner may yield, admitted with `--yielding`. Every acquisition of another application then
+  ends the processes of the default owner without `--force`, whether it holds the lock as its default
+  or acquired it itself, while it still waits for every other user. A yielding default owner suits a
+  program that a supervisor starts again after it ended, which runs under `baton run`, waits in the
+  queue and gets the GPU back after the release, such as a controller of the lights of one card. The
+  desktop on a system with a single GPU is a default owner that does not yield.
 - A lock is held while the cgroup of its owner is populated, which the kernel reports in
   `cgroup.events`. An owner that ends without a release leaves an empty cgroup, and the lock passes on
   as on a release, to the first waiting demand or to the default owner. No daemon keeps the state.
@@ -212,8 +218,8 @@ elevation program the host allows for exactly that helper.
 
 - `enclose --lock <name> --device <address>` puts a GPU under a lock and attaches the program to the
   root when it is absent. It prints the device files it locks.
-- `admit --lock <name> --application <name> [--default-owner]` makes an application eligible and
-  creates its cgroup. `dismiss --lock <name> --application <name>` makes it ineligible again.
+- `admit --lock <name> --application <name> [--default-owner [--yielding]]` makes an application
+  eligible and creates its cgroup, with `--yielding` as a default owner that yields. `dismiss --lock <name> --application <name>` makes it ineligible again.
 - `acquire --lock <name> --application <name> --process <pid> [--deadline <ms>] [--force]
   [--passthrough]` records the demand, waits for the GPU or ends its users, moves the process into the
   cgroup of the application and returns once it owns the lock. Root may move any process, so no
@@ -261,7 +267,8 @@ Every option is a flag with a variable beside it and a default.
 
 The flake exports `nixosModules.default`, so a NixOS host wires baton declaratively and a module of
 another project runs its programs inside a lock. A host names its locks in `baton.locks`, each with
-the PCI address of its GPU, its eligible applications and an optional default owner.
+the PCI address of its GPU, its eligible applications, an optional default owner and whether it
+yields.
 
 - A lock must stand before any service opens its GPU, or that service holds it and every acquisition
   waits for it. A rule of udev therefore runs the enclosure of a lock when a driver other than

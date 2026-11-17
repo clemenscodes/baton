@@ -61,6 +61,11 @@ impl ProductsBatonPresentationHostContext {
             let definition = "To respond to a request of baton_host and answer its exit code.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Yield", "Presence"];
+            let definition = "The flag --yielding of an admission, which makes the default owner yield to every acquisition.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

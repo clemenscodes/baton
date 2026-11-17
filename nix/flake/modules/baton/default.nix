@@ -40,7 +40,8 @@ let
     concatMapStringsSep "\n" (
       application:
       let
-        defaultFlag = if application == lock.defaultOwner then " --default-owner" else "";
+        yieldingFlag = if lock.yieldingDefaultOwner then " --yielding" else "";
+        defaultFlag = if application == lock.defaultOwner then " --default-owner${yieldingFlag}" else "";
       in
       "${hostProgram} admit --lock ${escapeShellArg lockName} --application ${escapeShellArg application}${defaultFlag} 2>/dev/null || true"
     ) (lockApplications lock);
@@ -89,6 +90,11 @@ let
         example = "desktop";
         description = "The eligible application that holds the lock whenever no other does, the desktop on a system with a single GPU.";
       };
+      yieldingDefaultOwner = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Whether every acquisition of another application ends the processes of the default owner without --force, for a default owner that is started again after every release.";
+      };
     };
   };
 in
@@ -132,6 +138,10 @@ in
       ++ mapAttrsToList (lockName: lock: {
         assertion = lockApplications lock != [ ];
         message = "baton.locks.${lockName} names no application, so nothing could ever use its GPU.";
+      }) setting.locks
+      ++ mapAttrsToList (lockName: lock: {
+        assertion = !lock.yieldingDefaultOwner || lock.defaultOwner != null;
+        message = "baton.locks.${lockName}.yieldingDefaultOwner needs a defaultOwner that yields.";
       }) setting.locks;
     environment.systemPackages = [ program ];
     users.groups.${setting.group} = { };

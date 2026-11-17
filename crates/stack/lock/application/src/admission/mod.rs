@@ -7,6 +7,7 @@ pub struct Admission {
     lock_name: LockName,
     application_name: ApplicationName,
     default_presence: bool,
+    yield_presence: bool,
 }
 
 impl Layer for Admission {
@@ -25,13 +26,22 @@ impl Admission {
     pub fn default_presence(&self) -> bool {
         self.default_presence
     }
+
+    pub fn yield_presence(&self) -> bool {
+        self.yield_presence
+    }
 }
 
-impl TryFrom<(String, String, bool)> for Admission {
+impl TryFrom<(String, String, bool, bool)> for Admission {
     type Error = Error;
 
     fn try_from(
-        (lock_text, application_text, default_presence): (String, String, bool),
+        (lock_text, application_text, default_presence, yield_presence): (
+            String,
+            String,
+            bool,
+            bool,
+        ),
     ) -> Result<Self, Self::Error> {
         let lock_name = LockName::try_from(lock_text)?;
         let application_name = ApplicationName::try_from(application_text)?;
@@ -39,6 +49,7 @@ impl TryFrom<(String, String, bool)> for Admission {
             lock_name,
             application_name,
             default_presence,
+            yield_presence,
         })
     }
 }
@@ -49,8 +60,13 @@ mod tests {
 
     #[test]
     fn the_command_keeps_its_lock_and_its_application() {
-        let command = Admission::try_from((String::from("rtx3080"), String::from("desktop"), true))
-            .unwrap();
+        let command = Admission::try_from((
+            String::from("rtx3080"),
+            String::from("desktop"),
+            true,
+            false,
+        ))
+        .unwrap();
 
         assert_eq!(command.lock_name().text(), "rtx3080");
         assert_eq!(command.application_name().text(), "desktop");
@@ -59,14 +75,24 @@ mod tests {
 
     #[test]
     fn the_command_of_a_wrong_name_is_refused() {
-        let outcome = Admission::try_from((String::from("rtx3080"), String::from("--help"), true));
+        let outcome = Admission::try_from((
+            String::from("rtx3080"),
+            String::from("--help"),
+            true,
+            false,
+        ));
 
         assert!(matches!(outcome, Err(Error::Name { .. })));
     }
 
     #[test]
     fn the_command_of_a_wrong_lock_is_refused() {
-        let outcome = Admission::try_from((String::from("--lock"), String::from("desktop"), true));
+        let outcome = Admission::try_from((
+            String::from("--lock"),
+            String::from("desktop"),
+            true,
+            false,
+        ));
 
         assert!(matches!(outcome, Err(Error::Name { .. })));
     }

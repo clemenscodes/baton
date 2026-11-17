@@ -11,3 +11,4 @@
 | Request | A request of baton_host, such as enclose or acquire, with its arguments. |
 | Try Respond Exit Code | To respond to a request of baton_host and answer its exit code. |
 | Users | The request of baton_host that names every user of the GPU of a lock. |
+| Yield Presence | The flag --yielding of an admission, which makes the default owner yield to every acquisition. |

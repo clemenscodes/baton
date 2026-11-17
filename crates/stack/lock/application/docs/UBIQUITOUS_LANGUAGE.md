@@ -36,6 +36,7 @@
 | End Deadline | The time a process has between the request to end it and its kill. |
 | Exit Code | The exit code of the program of a guard run. |
 | Force Presence | Whether an acquisition ends the users of the GPU instead of waiting for them. |
+| Foreign Users | The processes that hold the GPU outside the application and outside a yielding owner, for which an acquisition without --force waits. |
 | Former Owner | The application that owned a lock before its release or its end. |
 | Group Identifier | The identifier of a cgroup, the inode of its directory, which the map of the permissions holds. |
 | Guard | The lock guard and its ports. |
@@ -57,6 +58,7 @@
 | Maybe Application Name | The application whose processes a search of the users leaves out, where there is one. |
 | Maybe Deadline | The deadline of an acquisition, where it has one. |
 | Maybe Graphics Lock | The lock of a name among the records, where it exists. |
+| Maybe Yielding Owner | The default owner of a lock when it yields, or nothing. |
 | Mode | The acquisition mode. |
 | Name | The error of a name that is no name of a lock or of an application. |
 | Owner Name | The name of the owner of a lock. |
@@ -73,6 +75,7 @@
 | Program Texts | The program of a guard run and its arguments. |
 | Record | The records of the locks of the host. |
 | Record Lease | The exclusive lease of the records of the locks, which ends when it is dropped. |
+| Record Yield Presence | To record on a lock whether its default owner yields. |
 | Refresh | The command that finds the device files of every lock again, after a GPU went to vfio-pci or came back from it. |
 | Release | The command that ends the ownership of the owner of a lock and gives the GPU back. |
 | Release Outcome | The outcome of the release of a guard run. |
@@ -136,3 +139,6 @@
 | User Text | The users or the demands an acquisition waits for, as a text. |
 | Wait | The step of an acquisition that waits for the users it names. |
 | Wait Duration | The time a wait has lasted. |
+| Yield Presence | Whether an admitted default owner yields the lock to every acquisition of another application. |
+| Yielding Owner | The default owner of a lock that yields it to an acquisition. |
+| Yielding Users | The processes of a yielding owner that hold the GPU, which an acquisition ends without --force. |

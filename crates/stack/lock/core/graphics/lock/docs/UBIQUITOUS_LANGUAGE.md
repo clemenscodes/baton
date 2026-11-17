@@ -31,6 +31,7 @@
 | Maybe First Demand | The demand a lock serves next, where it has one. |
 | Maybe Owner | The eligible application that owns a lock, where one does. |
 | Maybe Permitted Application | The application the device program permits to open the GPU of a lock, its owner or else its default owner, where there is one. |
+| Maybe Yielding Owner | The default owner of a lock when it yields, or nothing. |
 | Owner Conflict | The error of a dismissal of the owner of a lock. |
 | Owner Mismatch | The error of a release by an application that does not own the lock. |
 | Owner Text | The owner of a lock as a text in an error, or nobody. |
@@ -39,6 +40,7 @@
 | Previous Files | The device files a lock locked before a replacement. |
 | Record Console Users | To remember the consoles and the framebuffers an acquisition unbound, once each. |
 | Record Passthrough | To remember that the GPU of a lock is handed to vfio-pci, and whether its persistence mode was on. |
+| Record Yield Presence | To record whether the default owner yields, which holds only while the lock has a default owner. |
 | Recorded Demand | A demand the queue of a lock holds. |
 | Remove Console Users | To empty the record of the consoles and the framebuffers and answer them, which a release binds again. |
 | Repetition Presence | Whether the queue already holds a demand of the same process. |
@@ -54,3 +56,4 @@
 | Try Record Demand | To put the demand of an eligible application into the queue of a lock, once for every process. |
 | Try Recover Owner | To set the owner of a lock from its record, refusing an application that is not eligible. |
 | Try Release | To end the ownership of the owner of a lock, refusing any other application. |
+| Yield Presence | Whether the default owner of a lock yields it to every acquisition of another application, without --force. |

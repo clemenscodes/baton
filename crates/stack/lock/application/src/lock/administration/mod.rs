@@ -96,6 +96,9 @@ impl<PortsType: LockPorts> SynchronousCommandHandler<Admission> for LockAdminist
         let mut graphics_lock = self.try_load_lock(admission.lock_name())?;
         let application_name = admission.application_name();
         graphics_lock.try_admit(application_name.clone(), admission.default_presence())?;
+        if admission.default_presence() {
+            graphics_lock.record_yield_presence(admission.yield_presence());
+        }
         let path_text = graphics_lock.application_path_text(application_name);
         self.lock_ports
             .control_group()
@@ -304,6 +307,7 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
         if !force_presence
             && let Some(owner_name) = graphics_lock.maybe_owner()
             && owner_name != application_name
+            && graphics_lock.maybe_yielding_owner() != Some(owner_name)
         {
             let user_text = owner_name.to_string();
             self.try_store_lock(&graphics_lock)?;
@@ -316,12 +320,34 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
                 .filter(|graphics_user| graphics_user.maybe_process_identifier().is_some())
                 .cloned(),
         );
-        if !process_users.is_empty() {
-            if !force_presence {
-                self.try_store_lock(&graphics_lock)?;
-                let user_text = Self::compose_texts(&process_users).join(", ");
-                return Ok(AcquisitionStep::Wait { user_text });
+        let yielding_users = match graphics_lock.maybe_yielding_owner() {
+            Some(yielding_owner) if yielding_owner != application_name => {
+                let path_text = graphics_lock.application_path_text(yielding_owner);
+                Vec::from_iter(
+                    process_users
+                        .iter()
+                        .filter(|process_user| process_user.check_membership(&path_text))
+                        .cloned(),
+                )
             }
+            _ => Vec::new(),
+        };
+        let foreign_users = Vec::from_iter(
+            process_users
+                .iter()
+                .filter(|process_user| !yielding_users.contains(process_user))
+                .cloned(),
+        );
+        if !force_presence && !foreign_users.is_empty() {
+            self.try_store_lock(&graphics_lock)?;
+            let user_text = Self::compose_texts(&foreign_users).join(", ");
+            return Ok(AcquisitionStep::Wait { user_text });
+        }
+        let process_users = match force_presence {
+            true => process_users,
+            false => yielding_users,
+        };
+        if !process_users.is_empty() {
             if let Some(permitted_application) = graphics_lock.maybe_permitted_application()
                 && permitted_application != application_name
             {
@@ -669,8 +695,12 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
             ),
             format!("  owner {}", maybe_owner_text(graphics_lock.maybe_owner())),
             format!(
-                "  default owner {}",
-                maybe_owner_text(graphics_lock.maybe_default_owner())
+                "  default owner {}{}",
+                maybe_owner_text(graphics_lock.maybe_default_owner()),
+                match graphics_lock.yield_presence() {
+                    true => ", yielding",
+                    false => "",
+                }
             ),
             format!(
                 "  demands {}",
@@ -1249,6 +1279,7 @@ mod tests {
                     String::from("rtx3080"),
                     String::from(application_text),
                     default_presence,
+                    false,
                 ))
                 .unwrap();
                 lock_administration.dispatch_command(admission).unwrap();
@@ -1362,6 +1393,7 @@ mod tests {
             String::from("rtx3080"),
             String::from("desktop"),
             true,
+            false,
         ))
         .unwrap();
 
@@ -1385,6 +1417,7 @@ mod tests {
             String::from("rtx3080"),
             String::from("desktop"),
             true,
+            false,
         ))
         .unwrap();
         lock_administration.dispatch_command(admission).unwrap();
@@ -1463,6 +1496,7 @@ mod tests {
             String::from("rtx3080"),
             String::from("desktop"),
             true,
+            false,
         ))
         .unwrap();
         lock_administration.dispatch_command(admission).unwrap();
@@ -1683,6 +1717,107 @@ mod tests {
     }
 
     #[test]
+    fn an_acquisition_ends_a_yielding_default_owner_and_waits_for_every_other_user() {
+        let fixture_lock_ports = fixture::lock_ports_factory();
+        let lock_administration = fixture::enclosure_factory(&fixture_lock_ports);
+        let admission = Admission::try_from((
+            String::from("rtx3080"),
+            String::from("desktop"),
+            true,
+            true,
+        ))
+        .unwrap();
+        lock_administration.dispatch_command(admission).unwrap();
+        let mut store = fixture_lock_ports.store.lock().unwrap();
+        store.process_users = vec![
+            fixture::process_user_factory(7, "/baton/rtx3080/desktop"),
+            fixture::process_user_factory(44, "/init.scope"),
+        ];
+        store.task_table.extend([7, 44]);
+        drop(store);
+        let acquisition_mode = AcquisitionMode::from((
+            Some(Duration::from_millis(100)),
+            false,
+            false,
+        ));
+
+        let outcome = lock_administration.dispatch_command(fixture::acquisition_factory(
+            "winix",
+            8,
+            acquisition_mode,
+        ));
+
+        assert!(matches!(outcome, Err(Error::DeadlineExpiry { .. })));
+        assert!(
+            fixture_lock_ports
+                .store
+                .lock()
+                .unwrap()
+                .displacement
+                .is_empty()
+        );
+        let mut store = fixture_lock_ports.store.lock().unwrap();
+        fixture::FixtureLockPorts::end_process(&mut store, 44);
+        drop(store);
+
+        lock_administration
+            .dispatch_command(fixture::acquisition_factory("winix", 8, acquisition_mode))
+            .unwrap();
+
+        let graphics_lock = fixture::graphics_lock_factory(&fixture_lock_ports);
+        assert_eq!(
+            graphics_lock.maybe_owner().map(ApplicationName::text),
+            Some("winix")
+        );
+        assert!(graphics_lock.yield_presence());
+        assert_eq!(fixture_lock_ports.store.lock().unwrap().displacement, [7]);
+        assert!(
+            LockAdministration::<&fixture::FixtureLockPorts>::compose_status_texts(&graphics_lock)
+                .contains(&String::from("  default owner desktop, yielding"))
+        );
+    }
+
+    #[test]
+    fn a_yielding_default_owner_that_acquired_the_lock_yields_it_as_well() {
+        let fixture_lock_ports = fixture::lock_ports_factory();
+        let lock_administration = fixture::enclosure_factory(&fixture_lock_ports);
+        let admission = Admission::try_from((
+            String::from("rtx3080"),
+            String::from("desktop"),
+            true,
+            true,
+        ))
+        .unwrap();
+        lock_administration.dispatch_command(admission).unwrap();
+        lock_administration
+            .dispatch_command(fixture::acquisition_factory(
+                "desktop",
+                7,
+                AcquisitionMode::default(),
+            ))
+            .unwrap();
+        let mut store = fixture_lock_ports.store.lock().unwrap();
+        store.process_users = vec![fixture::process_user_factory(43, "/baton/rtx3080/desktop")];
+        store.task_table.extend([43]);
+        drop(store);
+
+        lock_administration
+            .dispatch_command(fixture::acquisition_factory(
+                "winix",
+                8,
+                AcquisitionMode::default(),
+            ))
+            .unwrap();
+
+        let graphics_lock = fixture::graphics_lock_factory(&fixture_lock_ports);
+        assert_eq!(
+            graphics_lock.maybe_owner().map(ApplicationName::text),
+            Some("winix")
+        );
+        assert_eq!(fixture_lock_ports.store.lock().unwrap().displacement, [43]);
+    }
+
+    #[test]
     fn a_forced_acquisition_fails_on_a_user_that_survives_its_end() {
         let fixture_lock_ports = fixture::lock_ports_factory();
         let lock_administration = fixture::enclosure_factory(&fixture_lock_ports);
@@ -1840,6 +1975,7 @@ mod tests {
             String::from("rtx3080"),
             String::from("desktop"),
             true,
+            false,
         ))
         .unwrap();
         lock_administration.dispatch_command(admission).unwrap();
@@ -1949,6 +2085,7 @@ mod tests {
                         String::from("rtx3080"),
                         String::from("strata"),
                         false,
+                        false,
                     ))
                     .unwrap();
                     lock_administration.dispatch_command(admission)
@@ -2004,6 +2141,7 @@ mod tests {
                         String::from("rtx3080"),
                         String::from("desktop"),
                         true,
+                        false,
                     ))
                     .unwrap();
                     lock_administration.dispatch_command(admission)
@@ -2015,6 +2153,7 @@ mod tests {
                         String::from("rtx3080"),
                         String::from("desktop"),
                         true,
+                        false,
                     ))
                     .unwrap();
                     lock_administration.dispatch_command(admission).unwrap();
@@ -2052,6 +2191,7 @@ mod tests {
                         String::from("rtx3080"),
                         String::from("desktop"),
                         true,
+                        false,
                     ))
                     .unwrap();
                     lock_administration.dispatch_command(admission).unwrap();
@@ -2134,6 +2274,7 @@ mod tests {
                         String::from("rtx3080"),
                         String::from("desktop"),
                         true,
+                        false,
                     ))
                     .unwrap();
                     lock_administration.dispatch_command(admission).unwrap();
@@ -2224,6 +2365,7 @@ mod tests {
             String::from("rtx3080"),
             String::from("desktop"),
             true,
+            false,
         ))
         .unwrap();
         lock_administration.dispatch_command(admission).unwrap();
@@ -2234,8 +2376,13 @@ mod tests {
                 AcquisitionMode::default(),
             ))
             .unwrap();
-        let admission = Admission::try_from((String::from("rtx3080"), String::from("winix"), true))
-            .unwrap();
+        let admission = Admission::try_from((
+            String::from("rtx3080"),
+            String::from("winix"),
+            true,
+            false,
+        ))
+        .unwrap();
         let dismissal = Dismissal::try_from((String::from("rtx3080"), String::from("resolve")))
             .unwrap();
         let acquisition = fixture::acquisition_factory("strata", 9, AcquisitionMode::default());

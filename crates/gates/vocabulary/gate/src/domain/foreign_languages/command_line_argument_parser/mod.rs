@@ -35,6 +35,7 @@ impl CommandLineArgumentParser {
         "Parser",
         "required",
         "required_unless_present",
+        "requires",
         "requires_all",
         "Subcommand",
         "subcommand",

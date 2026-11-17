@@ -71,9 +71,15 @@ impl CommandLine {
                 lock,
                 application,
                 default_owner,
-            } => Admission::try_from((lock.clone(), application.clone(), *default_owner))
-                .and_then(|admission| lock_administration.dispatch_command(admission))
-                .map(|()| Vec::new()),
+                yield_presence,
+            } => Admission::try_from((
+                lock.clone(),
+                application.clone(),
+                *default_owner,
+                *yield_presence,
+            ))
+            .and_then(|admission| lock_administration.dispatch_command(admission))
+            .map(|()| Vec::new()),
             Request::Dismissal { lock, application } => {
                 Dismissal::try_from((lock.clone(), application.clone()))
                     .and_then(|dismissal| lock_administration.dispatch_command(dismissal))
@@ -251,6 +257,7 @@ mod tests {
                     "--application",
                     "desktop",
                     "--default-owner",
+                    "--yielding",
                 ],
                 &["dismiss", "--lock", "rtx3080", "--application", "desktop"],
                 &[

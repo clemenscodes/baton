@@ -686,6 +686,36 @@ impl StackLockApplicationContext {
             let definition = "To read the device files of every device of a lock.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Yield", "Presence"];
+            let definition = "Whether an admitted default owner yields the lock to every acquisition of another application.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Maybe", "Yielding", "Owner"];
+            let definition = "The default owner of a lock when it yields, or nothing.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Record", "Yield", "Presence"];
+            let definition = "To record on a lock whether its default owner yields.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Yielding", "Owner"];
+            let definition = "The default owner of a lock that yields it to an acquisition.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Yielding", "Users"];
+            let definition = "The processes of a yielding owner that hold the GPU, which an acquisition ends without --force.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Foreign", "Users"];
+            let definition = "The processes that hold the GPU outside the application and outside a yielding owner, for which an acquisition without --force waits.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

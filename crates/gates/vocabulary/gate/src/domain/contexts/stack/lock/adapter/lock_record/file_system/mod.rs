@@ -193,6 +193,16 @@ impl StackLockAdapterLockRecordFileSystemContext {
             let definition = "The locks of every record.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Yield", "Presence"];
+            let definition = "Whether the default owner of the recorded lock yields it.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Record", "Yield", "Presence"];
+            let definition = "To record on a loaded lock whether its default owner yields.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

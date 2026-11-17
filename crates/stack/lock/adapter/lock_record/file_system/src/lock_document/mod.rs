@@ -16,6 +16,8 @@ pub(crate) struct LockDocument {
     device_files: Vec<FileDocument>,
     application_names: Vec<String>,
     maybe_default_owner: Option<String>,
+    #[serde(default)]
+    yield_presence: bool,
     maybe_owner: Option<String>,
     graphics_demands: Vec<DemandDocument>,
     console_users: Vec<UserDocument>,
@@ -87,6 +89,7 @@ impl From<&GraphicsLock> for LockDocument {
                 graphics_lock.application_names().iter().map(name_text),
             ),
             maybe_default_owner: graphics_lock.maybe_default_owner().map(name_text),
+            yield_presence: graphics_lock.yield_presence(),
             maybe_owner: graphics_lock.maybe_owner().map(name_text),
             graphics_demands: Vec::from_iter(
                 graphics_lock
@@ -195,6 +198,7 @@ impl TryFrom<LockDocument> for GraphicsLock {
             device_files,
             application_names,
             maybe_default_owner,
+            yield_presence,
             maybe_owner,
             graphics_demands,
             console_users,
@@ -229,6 +233,7 @@ impl TryFrom<LockDocument> for GraphicsLock {
                             .map_err(LockDocument::compose_text)
                     })
             })?;
+        graphics_lock.record_yield_presence(yield_presence);
         graphics_demands
             .into_iter()
             .try_for_each(|demand_document| {

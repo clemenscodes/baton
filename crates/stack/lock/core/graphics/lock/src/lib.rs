@@ -19,6 +19,7 @@ pub struct GraphicsLock {
     device_files: Vec<DeviceFile>,
     application_names: Vec<ApplicationName>,
     maybe_default_owner: Option<ApplicationName>,
+    yield_presence: bool,
     maybe_owner: Option<ApplicationName>,
     graphics_demands: Vec<GraphicsDemand>,
     console_users: Vec<GraphicsUser>,
@@ -49,6 +50,7 @@ impl From<(LockName, u32)> for GraphicsLock {
             device_files: Vec::new(),
             application_names: Vec::new(),
             maybe_default_owner: None,
+            yield_presence: false,
             maybe_owner: None,
             graphics_demands: Vec::new(),
             console_users: Vec::new(),
@@ -87,6 +89,20 @@ impl GraphicsLock {
 
     pub fn maybe_owner(&self) -> Option<&ApplicationName> {
         self.maybe_owner.as_ref()
+    }
+
+    pub fn yield_presence(&self) -> bool {
+        self.yield_presence
+    }
+
+    pub fn maybe_yielding_owner(&self) -> Option<&ApplicationName> {
+        self.maybe_default_owner
+            .as_ref()
+            .filter(|_| self.yield_presence)
+    }
+
+    pub fn record_yield_presence(&mut self, yield_presence: bool) {
+        self.yield_presence = yield_presence && self.maybe_default_owner.is_some();
     }
 
     pub fn graphics_demands(&self) -> &[GraphicsDemand] {
@@ -195,6 +211,7 @@ impl GraphicsLock {
         }
         if self.maybe_default_owner.as_ref() == Some(application_name) {
             self.maybe_default_owner = None;
+            self.yield_presence = false;
         }
         self.application_names
             .retain(|eligible_name| eligible_name != application_name);
@@ -412,6 +429,25 @@ mod tests {
             Some(&default_owner)
         );
         assert_eq!(graphics_lock.maybe_default_owner(), Some(&default_owner));
+    }
+
+    #[test]
+    fn a_yielding_default_owner_yields_until_its_dismissal() {
+        let mut graphics_lock = fixture::graphics_lock_factory();
+        let default_owner = fixture::application_name_factory("openrgb");
+        graphics_lock.record_yield_presence(true);
+        assert!(!graphics_lock.yield_presence());
+        graphics_lock
+            .try_admit(default_owner.clone(), true)
+            .unwrap();
+
+        graphics_lock.record_yield_presence(true);
+
+        assert!(graphics_lock.yield_presence());
+        assert_eq!(graphics_lock.maybe_yielding_owner(), Some(&default_owner));
+        graphics_lock.try_dismiss(&default_owner).unwrap();
+        assert!(!graphics_lock.yield_presence());
+        assert_eq!(graphics_lock.maybe_yielding_owner(), None);
     }
 
     #[test]

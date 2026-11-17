@@ -24,6 +24,12 @@ pub(crate) enum Request {
             help = "Makes the application the owner while no other owns the lock"
         )]
         default_owner: bool,
+        #[arg(
+            long = "yielding",
+            requires = "default_owner",
+            help = "Ends the default owner whenever another application acquires the lock, without --force"
+        )]
+        yield_presence: bool,
     },
     #[command(
         name = "dismiss",

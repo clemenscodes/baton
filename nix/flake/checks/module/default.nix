@@ -13,6 +13,7 @@ let
         device = "0000:03:00.0";
         applications = [ "guest" ];
         defaultOwner = "desktop";
+        yieldingDefaultOwner = true;
       };
     };
     boot.loader.grub.enable = false;
@@ -49,7 +50,7 @@ runCommand "module"
     enclosure=$(grep --only-matching 'RUN+="[^"]*baton-enclosure-rtx3080"' "$udevRulesPath" | cut --delimiter '"' --fields 2)
     grep --quiet -- "enclose --lock rtx3080 --device 0000:03:00.0" "$enclosure" || fail "the enclosure does not enclose the GPU."
     grep --quiet -- "--application guest 2" "$enclosure" || fail "the enclosure does not admit guest."
-    grep --quiet -- "--application desktop --default-owner" "$enclosure" || fail "the enclosure does not admit desktop as the default owner."
+    grep --quiet -- "--application desktop --default-owner --yielding" "$enclosure" || fail "the enclosure does not admit desktop as the default owner."
     test "$(grep --count "" "$sudoRulesPath")" = 3 || fail "the sudo rules allow more than acquire, release and status."
     grep --quiet 'baton_host status$' "$sudoRulesPath" || fail "the sudo rules do not allow the status."
     grep --quiet 'baton-admission-rtx3080' "$activationTextPath" || fail "the activation does not admit the applications."

@@ -31,9 +31,11 @@
 | Record Path | The path of the record of a lock, its name with the extension json in the record directory. |
 | Record Paths | The paths of the records in the record directory. |
 | Record Text | The text of the record of a lock. |
+| Record Yield Presence | To record on a loaded lock whether its default owner yields. |
 | Stack Lock Adapter Lock Record File System | The crate stack_lock_adapter_lock_record_file_system, the adapter of the port LockRecord of stack_lock_application over a file of JSON for every lock and a lease of flock. |
 | Transfer Extension | The extension of the file a record is first written to before it replaces the record. |
 | Transfer Path | The path of the file a record is first written to before it replaces the record. |
 | Try Open Lease | To open the file of the lease and lock it exclusively, waiting for another lease to end. |
 | Try Parse Lock | To read a lock from the text of its record. |
 | User Document | A console or a framebuffer an acquisition unbound, as the record of its lock holds it. |
+| Yield Presence | Whether the default owner of the recorded lock yields it. |

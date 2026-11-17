@@ -1,0 +1,32 @@
+$schema: '../../../../../../.moon/cache/schemas/project.json'
+
+id: 'stack_process_adapter_spawner_standard_library'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'process', 'infrastructure']
+
+dependsOn:
+  - 'stack_domain_driven_design_core'
+  - 'stack_process_core_invocation'
+
+tasks:
+  cargo/build/crate:
+    env: &test_environment
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER: '${NATIVE_TEST_RUNNER}'
+
+  cargo/crate:
+    command: 'cargo test --release --locked --tests --package $project'
+    env:
+      <<: *test_environment
+      HOME: '$workspaceRoot/target/moon/home'
+    options:
+      mergeArgs: 'replace'
+
+  cargo/coverage/report:
+    command: '$workspaceRoot/target/moon/tool/release/tool_coverage measure $workspaceRoot/target/moon/coverage/$project.json cargo build --tests --locked --message-format json-render-diagnostics --package $project -- cargo test --locked --tests --package $project'
+    env:
+      <<: *test_environment
+      HOME: '$workspaceRoot/target/moon/home'
+    options:
+      mergeArgs: 'replace'

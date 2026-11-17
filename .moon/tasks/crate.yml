@@ -1,0 +1,172 @@
+$schema: '../cache/schemas/tasks.json'
+
+inheritedBy:
+  tags: ['crate']
+
+taskOptions:
+  outputStyle: 'stream'
+  runFromWorkspaceRoot: true
+
+tasks:
+  sources:
+    toolchain: 'system'
+    command: 'noop'
+    inputs:
+      - 'Cargo.toml'
+      - '*.rs'
+      - 'src/**/*'
+    deps:
+      - target: '^production:sources'
+        cacheStrategy: 'hash'
+
+  nix/build/crate:
+    toolchain: 'system'
+    options:
+      runInCI: false
+    command: 'nix build --no-link --print-build-logs .#checks.x86_64-linux.$project'
+    deps:
+      - target: '~:sources'
+        cacheStrategy: 'hash'
+      - target: '^development:sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:flake'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    inputs:
+      - 'tests/**/*'
+
+  nix/build/vocabulary:
+    toolchain: 'system'
+    options:
+      runInCI: false
+    command: 'nix build --no-link --print-build-logs .#checks.x86_64-linux.vocabulary-$project'
+    deps:
+      - target: 'gates_vocabulary_gate:sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:flake'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    inputs:
+      - '**/*.rs'
+      - 'Cargo.toml'
+
+  nix/build/coverage:
+    toolchain: 'system'
+    options:
+      runInCI: false
+    command: 'nix build --no-link --print-build-logs .#checks.x86_64-linux.coverage-$project'
+    deps:
+      - target: '~:sources'
+        cacheStrategy: 'hash'
+      - target: '^development:sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:coverage_sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:flake'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    inputs:
+      - 'tests/**/*'
+
+  cargo/build/crate:
+    toolchain: 'system'
+    command: 'cargo build --release --locked --package $project'
+    env:
+      CARGO_TARGET_DIR: '$workspaceRoot/target/moon/crate'
+    options:
+      envOverride: true
+    deps:
+      - target: '~:sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    inputs: []
+
+  cargo/crate:
+    toolchain: 'system'
+    command: 'cargo nextest run --cargo-profile release --profile release --locked --package $project --no-tests=warn'
+    env:
+      CARGO_TARGET_DIR: '$workspaceRoot/target/moon/crate'
+      NEXTEST_SHOW_PROGRESS: 'counter'
+    options:
+      envOverride: true
+    deps:
+      - target: '~:cargo/build/crate'
+        cacheStrategy: 'hash'
+      - target: '^development:sources'
+        cacheStrategy: 'hash'
+    inputs:
+      - 'tests/**/*'
+
+  cargo/vocabulary:
+    toolchain: 'system'
+    command: 'cargo run --release --locked --package gates_vocabulary_gate -- $projectSource'
+    env:
+      CARGO_TARGET_DIR: '$workspaceRoot/target/moon/tool'
+    options:
+      envOverride: true
+    deps:
+      - target: 'gates_vocabulary_gate:sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    inputs:
+      - '**/*.rs'
+      - 'Cargo.toml'
+
+  cargo/coverage/report:
+    toolchain: 'system'
+    command: '$workspaceRoot/target/moon/tool/release/tool_coverage measure $workspaceRoot/target/moon/coverage/$project.json cargo build --tests --locked --message-format json-render-diagnostics --package $project -- cargo nextest run --locked --profile debug --package $project --no-tests=warn'
+    env:
+      CARGO_TARGET_DIR: '$workspaceRoot/target/moon/coverage'
+      NEXTEST_SHOW_PROGRESS: 'counter'
+    options:
+      envOverride: true
+    deps:
+      - target: '~:sources'
+        cacheStrategy: 'hash'
+      - target: '^development:sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:coverage_program'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    inputs:
+      - 'tests/**/*'
+    outputs:
+      - '/target/moon/coverage/$project.json'
+
+  cargo/coverage:
+    toolchain: 'system'
+    command: '$workspaceRoot/target/moon/tool/release/tool_coverage $workspaceRoot/target/moon/coverage/$project.json'
+    deps:
+      - target: '~:cargo/coverage/report'
+        cacheStrategy: 'hash'
+      - target: 'workspace:coverage_program'
+        cacheStrategy: 'hash'
+    inputs: []
+
+  pure:
+    options:
+      runInCI: false
+    inputs: []
+    deps:
+      - '~:nix/build/crate'
+      - '~:nix/build/vocabulary'
+      - '~:nix/build/coverage'
+
+  ci:
+    inputs: []
+    deps:
+      - '~:cargo/crate'
+      - '~:cargo/vocabulary'
+      - '~:cargo/coverage'

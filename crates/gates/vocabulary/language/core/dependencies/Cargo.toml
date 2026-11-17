@@ -1,0 +1,16 @@
+[package]
+name = "gates_vocabulary_language_core_dependencies"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+gates_vocabulary_language_core_foreign_name.workspace = true
+gates_vocabulary_language_core_language.workspace = true
+stack_domain_driven_design_core.workspace = true

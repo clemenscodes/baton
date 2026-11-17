@@ -1,0 +1,19 @@
+[profile.default]
+default-filter = """
+not (
+  package(=gates_coverage_adapter_process)
+  | package(=stack_process_adapter_spawner_standard_library)
+)
+"""
+
+[profile.debug]
+fail-fast = true
+failure-output = "immediate"
+status-level = "pass"
+slow-timeout = { period = "20s", terminate-after = 1 }
+
+[profile.release]
+fail-fast = false
+failure-output = "immediate-final"
+status-level = "all"
+slow-timeout = { period = "20s", terminate-after = 1 }

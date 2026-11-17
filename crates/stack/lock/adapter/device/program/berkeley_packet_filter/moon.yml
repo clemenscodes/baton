@@ -1,0 +1,12 @@
+$schema: '../../../../../../../.moon/cache/schemas/project.json'
+
+id: 'stack_lock_adapter_device_program_berkeley_packet_filter'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'lock', 'infrastructure']
+
+dependsOn:
+  - 'stack_domain_driven_design_core'
+  - 'stack_lock_application'
+  - 'stack_lock_core_device_file'

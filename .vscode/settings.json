@@ -1,0 +1,30 @@
+{
+  "moon.binPath": ".vscode/moon",
+  "rust-analyzer.server.path": "${workspaceFolder}/.vscode/rust-analyzer",
+  "[rust]": { "editor.defaultFormatter": "rust-lang.rust-analyzer" },
+  "yaml.schemas": {
+    "./.moon/cache/schemas/project.json": ["**/moon.yml"],
+    "./.moon/cache/schemas/tasks.json": [".moon/tasks/**/*.yml"],
+    "./.moon/cache/schemas/workspace.json": [".moon/workspace.yml"]
+  },
+  "nix.enableLanguageServer": true,
+  "nix.serverPath": "${workspaceFolder}/.vscode/nil",
+  "nix.formatterPath": ["${workspaceFolder}/.vscode/treefmt", "--tree-root", "${workspaceFolder}", "--stdin", "file.nix"],
+  "nix.serverSettings": {
+    "nil": {
+      "formatting": { "command": ["${workspaceFolder}/.vscode/treefmt", "--tree-root", "${workspaceFolder}", "--stdin", "file.nix"] }
+    }
+  },
+  "files.watcherExclude": {
+    "**/target/**": true,
+    "**/.direnv/**": true
+  },
+  "search.followSymlinks": false,
+  "search.exclude": {
+    "**/target/**": true,
+    "**/.direnv/**": true
+  },
+  "editor.formatOnSave": true,
+  "[nix]": { "editor.defaultFormatter": "jnoortheen.nix-ide" },
+  "direnv.restart.automatic": true
+}

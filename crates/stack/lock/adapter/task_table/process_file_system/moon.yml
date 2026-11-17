@@ -1,0 +1,13 @@
+$schema: '../../../../../../.moon/cache/schemas/project.json'
+
+id: 'stack_lock_adapter_task_table_process_file_system'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'lock', 'infrastructure']
+
+dependsOn:
+  - 'stack_domain_driven_design_core'
+  - 'stack_lock_application'
+  - 'stack_lock_core_device_file'
+  - 'stack_lock_core_graphics_user'

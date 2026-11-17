@@ -1,0 +1,3 @@
+#:tombi schema.strict = false
+edition = "2024"
+assignment_rhs_break = "SameLine"

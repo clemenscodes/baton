@@ -1,0 +1,15 @@
+[package]
+name = "stack_lock_adapter_pause_standard_library"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+stack_domain_driven_design_core.workspace = true
+stack_lock_application.workspace = true

@@ -1,0 +1,19 @@
+[package]
+name = "gates_vocabulary_language_adapter_command_line"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+clap.workspace = true
+gates_vocabulary_language_adapter_file_system.workspace = true
+gates_vocabulary_language_adapter_syntax.workspace = true
+gates_vocabulary_language_adapter_toms_obvious_minimal_language.workspace = true
+gates_vocabulary_language_application.workspace = true
+stack_domain_driven_design_core.workspace = true

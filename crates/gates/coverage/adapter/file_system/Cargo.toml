@@ -1,0 +1,17 @@
+[package]
+name = "gates_coverage_adapter_file_system"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+gates_coverage_core_profile_directory.workspace = true
+gates_coverage_core_report.workspace = true
+gates_coverage_core_source.workspace = true
+stack_domain_driven_design_core.workspace = true

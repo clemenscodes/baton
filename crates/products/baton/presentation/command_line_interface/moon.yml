@@ -1,0 +1,18 @@
+$schema: '../../../../../.moon/cache/schemas/project.json'
+
+id: 'products_baton_presentation_command_line_interface'
+language: 'rust'
+stack: 'systems'
+layer: 'application'
+tags: ['crate', 'baton', 'presentation']
+
+dependsOn:
+  - 'stack_domain_driven_design_core'
+  - 'stack_lock_adapter_host_helper_elevation_program'
+  - 'stack_lock_adapter_program_runner_spawner'
+  - 'stack_lock_application'
+  - 'stack_process_adapter_spawner_standard_library'
+  - id: 'stack_process_adapter_spawner_transcript'
+    scope: 'development'
+  - id: 'stack_process_core_invocation'
+    scope: 'development'

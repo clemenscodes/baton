@@ -1,0 +1,132 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/stack/domain_driven_design/core",
+  "crates/products/baton/presentation/host",
+  "crates/products/baton/presentation/command_line_interface",
+  "crates/stack/lock/adapter/device/program/berkeley_packet_filter",
+  "crates/stack/lock/adapter/device/tree/system_file_system",
+  "crates/stack/lock/adapter/task_table/process_file_system",
+  "crates/stack/lock/adapter/control_group/unified_hierarchy",
+  "crates/stack/lock/adapter/lock_record/file_system",
+  "crates/stack/lock/adapter/host_helper/elevation_program",
+  "crates/stack/lock/adapter/program_runner/spawner",
+  "crates/stack/lock/adapter/pause/standard_library",
+  "crates/stack/lock/application",
+  "crates/stack/lock/core/graphics/lock",
+  "crates/stack/lock/core/demand",
+  "crates/stack/lock/core/graphics/user",
+  "crates/stack/lock/core/device/file",
+  "crates/stack/lock/core/device/address",
+  "crates/stack/lock/core/name",
+  "crates/stack/process/adapter/spawner/standard_library",
+  "crates/stack/process/adapter/spawner/transcript",
+  "crates/stack/process/core/invocation",
+  "crates/gates/coverage/adapter/file_system",
+  "crates/gates/coverage/adapter/java_script_object_notation",
+  "crates/gates/coverage/adapter/process",
+  "crates/gates/coverage/adapter/syntax",
+  "crates/gates/coverage/application",
+  "crates/gates/coverage/command_line",
+  "crates/gates/coverage/core/compiler",
+  "crates/gates/coverage/core/gaps",
+  "crates/gates/coverage/core/invocation",
+  "crates/gates/coverage/core/mapping_presence",
+  "crates/gates/coverage/core/profile/directory",
+  "crates/gates/coverage/core/profile/tools",
+  "crates/gates/coverage/core/region",
+  "crates/gates/coverage/core/report",
+  "crates/gates/coverage/core/source",
+  "crates/gates/coverage/core/span",
+  "crates/gates/coverage/core/test/boundaries",
+  "crates/gates/coverage/core/test/build",
+  "crates/gates/vocabulary/gate",
+  "crates/gates/vocabulary/language/adapter/command_line",
+  "crates/gates/vocabulary/language/adapter/file_system",
+  "crates/gates/vocabulary/language/adapter/syntax",
+  "crates/gates/vocabulary/language/adapter/toms_obvious_minimal_language",
+  "crates/gates/vocabulary/language/application",
+  "crates/gates/vocabulary/language/core/books",
+  "crates/gates/vocabulary/language/core/dependencies",
+  "crates/gates/vocabulary/language/core/foreign_name",
+  "crates/gates/vocabulary/language/core/language",
+  "crates/gates/vocabulary/language/core/languages",
+]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+non_canonical_partial_ord_impl = "allow"
+
+[workspace.metadata.crane]
+name = "baton"
+
+[workspace.dependencies]
+berkeley_packet_filter = { git = "https://github.com/clemenscodes/berkeley_packet_filter", rev = "8143aca9c24114cb0d9f5eb9f49e212d0a5625c9" }
+rustix = { version = "=1.1.2", features = ["fs", "process", "std"] }
+clap = { version = "=4.6.6", features = ["derive", "env", "string"] }
+proc-macro2 = { version = "=1.0.107", default-features = false, features = ["span-locations"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+syn = { version = "=3.0.9", default-features = false, features = ["parsing", "full", "visit"] }
+tokio = { version = "=1.54.1", default-features = false, features = ["rt", "sync"] }
+toml = "=1.1.8"
+stack_domain_driven_design_core = { path = "crates/stack/domain_driven_design/core" }
+products_baton_presentation_host = { path = "crates/products/baton/presentation/host" }
+products_baton_presentation_command_line_interface = { path = "crates/products/baton/presentation/command_line_interface" }
+stack_lock_adapter_device_program_berkeley_packet_filter = { path = "crates/stack/lock/adapter/device/program/berkeley_packet_filter" }
+stack_lock_adapter_device_tree_system_file_system = { path = "crates/stack/lock/adapter/device/tree/system_file_system" }
+stack_lock_adapter_task_table_process_file_system = { path = "crates/stack/lock/adapter/task_table/process_file_system" }
+stack_lock_adapter_control_group_unified_hierarchy = { path = "crates/stack/lock/adapter/control_group/unified_hierarchy" }
+stack_lock_adapter_lock_record_file_system = { path = "crates/stack/lock/adapter/lock_record/file_system" }
+stack_lock_adapter_host_helper_elevation_program = { path = "crates/stack/lock/adapter/host_helper/elevation_program" }
+stack_lock_adapter_program_runner_spawner = { path = "crates/stack/lock/adapter/program_runner/spawner" }
+stack_lock_adapter_pause_standard_library = { path = "crates/stack/lock/adapter/pause/standard_library" }
+stack_lock_application = { path = "crates/stack/lock/application" }
+stack_lock_core_graphics_lock = { path = "crates/stack/lock/core/graphics/lock" }
+stack_lock_core_demand = { path = "crates/stack/lock/core/demand" }
+stack_lock_core_graphics_user = { path = "crates/stack/lock/core/graphics/user" }
+stack_lock_core_device_file = { path = "crates/stack/lock/core/device/file" }
+stack_lock_core_device_address = { path = "crates/stack/lock/core/device/address" }
+stack_lock_core_name = { path = "crates/stack/lock/core/name" }
+stack_process_adapter_spawner_standard_library = { path = "crates/stack/process/adapter/spawner/standard_library" }
+stack_process_adapter_spawner_transcript = { path = "crates/stack/process/adapter/spawner/transcript" }
+stack_process_core_invocation = { path = "crates/stack/process/core/invocation" }
+gates_coverage_adapter_file_system = { path = "crates/gates/coverage/adapter/file_system" }
+gates_coverage_adapter_java_script_object_notation = { path = "crates/gates/coverage/adapter/java_script_object_notation" }
+gates_coverage_adapter_process = { path = "crates/gates/coverage/adapter/process" }
+gates_coverage_adapter_syntax = { path = "crates/gates/coverage/adapter/syntax" }
+gates_coverage_application = { path = "crates/gates/coverage/application" }
+gates_coverage_command_line = { path = "crates/gates/coverage/command_line" }
+gates_coverage_core_compiler = { path = "crates/gates/coverage/core/compiler" }
+gates_coverage_core_gaps = { path = "crates/gates/coverage/core/gaps" }
+gates_coverage_core_invocation = { path = "crates/gates/coverage/core/invocation" }
+gates_coverage_core_mapping_presence = { path = "crates/gates/coverage/core/mapping_presence" }
+gates_coverage_core_profile_directory = { path = "crates/gates/coverage/core/profile/directory" }
+gates_coverage_core_profile_tools = { path = "crates/gates/coverage/core/profile/tools" }
+gates_coverage_core_region = { path = "crates/gates/coverage/core/region" }
+gates_coverage_core_report = { path = "crates/gates/coverage/core/report" }
+gates_coverage_core_source = { path = "crates/gates/coverage/core/source" }
+gates_coverage_core_span = { path = "crates/gates/coverage/core/span" }
+gates_coverage_core_test_boundaries = { path = "crates/gates/coverage/core/test/boundaries" }
+gates_coverage_core_test_build = { path = "crates/gates/coverage/core/test/build" }
+gates_vocabulary_gate = { path = "crates/gates/vocabulary/gate" }
+gates_vocabulary_language_adapter_command_line = { path = "crates/gates/vocabulary/language/adapter/command_line" }
+gates_vocabulary_language_adapter_file_system = { path = "crates/gates/vocabulary/language/adapter/file_system" }
+gates_vocabulary_language_adapter_syntax = { path = "crates/gates/vocabulary/language/adapter/syntax" }
+gates_vocabulary_language_adapter_toms_obvious_minimal_language = { path = "crates/gates/vocabulary/language/adapter/toms_obvious_minimal_language" }
+gates_vocabulary_language_application = { path = "crates/gates/vocabulary/language/application" }
+gates_vocabulary_language_core_books = { path = "crates/gates/vocabulary/language/core/books" }
+gates_vocabulary_language_core_dependencies = { path = "crates/gates/vocabulary/language/core/dependencies" }
+gates_vocabulary_language_core_foreign_name = { path = "crates/gates/vocabulary/language/core/foreign_name" }
+gates_vocabulary_language_core_language = { path = "crates/gates/vocabulary/language/core/language" }
+gates_vocabulary_language_core_languages = { path = "crates/gates/vocabulary/language/core/languages" }
+
+[profile.release]
+codegen-units = 1

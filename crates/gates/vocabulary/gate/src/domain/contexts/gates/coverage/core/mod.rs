@@ -1,0 +1,10 @@
+pub(crate) mod compiler;
+pub(crate) mod gaps;
+pub(crate) mod invocation;
+pub(crate) mod mapping_presence;
+pub(crate) mod profile;
+pub(crate) mod region;
+pub(crate) mod report;
+pub(crate) mod source;
+pub(crate) mod span;
+pub(crate) mod test;

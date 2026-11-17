@@ -1,0 +1,37 @@
+$schema: '../../../../../../.moon/cache/schemas/project.json'
+
+id: 'gates_vocabulary_language_adapter_command_line'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'tool', 'infrastructure']
+
+dependsOn:
+  - 'gates_vocabulary_language_adapter_file_system'
+  - 'gates_vocabulary_language_adapter_syntax'
+  - 'gates_vocabulary_language_adapter_toms_obvious_minimal_language'
+  - 'gates_vocabulary_language_application'
+  - 'stack_domain_driven_design_core'
+
+tasks:
+  cargo/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_program'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'
+
+  nix/build/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:flake'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'

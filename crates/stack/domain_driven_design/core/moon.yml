@@ -1,0 +1,7 @@
+$schema: '../../../../.moon/cache/schemas/project.json'
+
+id: 'stack_domain_driven_design_core'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'domain_driven_design']

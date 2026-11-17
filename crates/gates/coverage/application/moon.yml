@@ -1,0 +1,47 @@
+$schema: '../../../../.moon/cache/schemas/project.json'
+
+id: 'gates_coverage_application'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'tool', 'application']
+
+dependsOn:
+  - 'gates_coverage_core_compiler'
+  - 'gates_coverage_core_gaps'
+  - 'gates_coverage_core_invocation'
+  - 'gates_coverage_core_mapping_presence'
+  - 'gates_coverage_core_profile_directory'
+  - 'gates_coverage_core_profile_tools'
+  - 'gates_coverage_core_report'
+  - 'gates_coverage_core_source'
+  - 'gates_coverage_core_test_boundaries'
+  - 'gates_coverage_core_test_build'
+  - 'stack_domain_driven_design_core'
+  - id: 'gates_coverage_core_region'
+    scope: 'development'
+  - id: 'gates_coverage_core_span'
+    scope: 'development'
+
+tasks:
+  cargo/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_program'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'
+
+  nix/build/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:flake'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'

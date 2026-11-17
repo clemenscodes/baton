@@ -1,0 +1,1464 @@
+diff --git a/src/tools/rustfmt/Configurations.md b/src/tools/rustfmt/Configurations.md
+index 45a8b1e..4881e37 100644
+--- a/src/tools/rustfmt/Configurations.md
++++ b/src/tools/rustfmt/Configurations.md
+@@ -29,6 +29,83 @@ By default this option is set as a percentage of [`max_width`](#max_width) provi
+ 
+ See also [`max_width`](#max_width) and [`use_small_heuristics`](#use_small_heuristics)
+ 
++## `assignment_rhs_break`
++
++Where to break the right-hand side of an assignment, a `let` statement, a `const` or a `static`,
++and the type of a struct field, a type alias or a foreign `static`, that does not fit on the line
++of its left-hand side.
++
++- **Default value**: `"Heuristic"`
++- **Possible values**: `"Heuristic"`, `"TrailingDelimiter"`, `"SameLine"`
++- **Stable**: Yes
++
++#### `"Heuristic"` (default):
++
++The right-hand side moves to the next line when it fits there on one line.
++
++```rust
++fn main() {
++    {
++        {
++            let embodiment =
++                Embodiment::try_from((content, character, session, current_instant, rest))?;
++        }
++    }
++}
++```
++
++#### `"TrailingDelimiter"`:
++
++A right-hand side that ends in a call, a tuple, a struct literal, an array or a macro call, and a
++type that ends in generic arguments, a tuple, a slice or the parameters of a function pointer,
++stays on the line of the left-hand side and breaks inside its trailing delimiter.
++
++```rust
++fn main() {
++    {
++        {
++            let embodiment = Embodiment::try_from((
++                content,
++                character,
++                session,
++                current_instant,
++                rest,
++            ))?;
++        }
++    }
++}
++```
++
++#### `"SameLine"`:
++
++Every right-hand side starts on the line of its `=`, `=>` or `:`: the right-hand side of a `let`,
++an assignment, a `const` or a `static`, the type of a struct field or a type alias, the bounds of a
++where clause or of a trait, the value of a field of a struct literal or a struct pattern, and the
++body of a match arm, whose block opens on that line even behind a guard of several lines. It
++breaks only inside itself, before a binary operator, inside a delimiter, at a link of a chain or
++in the block of a match arm, and where it cannot break at all, such as a long string literal, the
++line grows past `max_width`.
++
++```rust
++fn main() {
++    {
++        {
++            let maybe_moment_milliseconds = playback_milliseconds
++                .checked_rem(duration_milliseconds_value);
++            let expectation = "detail level 1 is 4 by 4 pixels, but half of the level before it is 2 by 2";
++            match vacancy_value {
++                Some(last_vacancy)
++                    if last_vacancy.compose_end_element()
++                        == vacancy.first_element_of_the_page() => {
++                    page_index = last_vacancy.page_index();
++                }
++                _ => {}
++            }
++        }
++    }
++}
++```
++
+ ## `attr_fn_like_width`
+ 
+ Maximum width of the args of a function-like attributes before falling back to vertical formatting.
+diff --git a/src/tools/rustfmt/src/config/mod.rs b/src/tools/rustfmt/src/config/mod.rs
+index 8abb743..576694f 100644
+--- a/src/tools/rustfmt/src/config/mod.rs
++++ b/src/tools/rustfmt/src/config/mod.rs
+@@ -123,6 +123,9 @@ create_config! {
+         "Width threshold for an array element to be considered short";
+     overflow_delimited_expr: OverflowDelimitedExpr, false,
+         "Allow trailing bracket/brace delimited expressions to overflow";
++    assignment_rhs_break: AssignmentRhsBreakConfig, true,
++        "Where to break the right-hand side of an assignment or the type of a field that does not \
++        fit on one line";
+     struct_field_align_threshold: StructFieldAlignThreshold, false,
+         "Align struct fields if their diffs fits within threshold";
+     enum_discrim_align_threshold: EnumDiscrimAlignThreshold, false,
+@@ -801,6 +804,7 @@ remove_nested_parens = true
+ combine_control_expr = true
+ short_array_element_width_threshold = 10
+ overflow_delimited_expr = false
++assignment_rhs_break = "Heuristic"
+ struct_field_align_threshold = 0
+ enum_discrim_align_threshold = 0
+ match_arm_blocks = true
+@@ -893,6 +897,7 @@ remove_nested_parens = true
+ combine_control_expr = true
+ short_array_element_width_threshold = 10
+ overflow_delimited_expr = false
++assignment_rhs_break = "Heuristic"
+ struct_field_align_threshold = 0
+ enum_discrim_align_threshold = 0
+ match_arm_blocks = true
+diff --git a/src/tools/rustfmt/src/config/options.rs b/src/tools/rustfmt/src/config/options.rs
+index 00f9c3f..f458780 100644
+--- a/src/tools/rustfmt/src/config/options.rs
++++ b/src/tools/rustfmt/src/config/options.rs
+@@ -494,6 +494,22 @@ impl PartialOrd for Edition {
+     }
+ }
+ 
++/// Controls where rustfmt breaks the right-hand side of an assignment that does not fit on
++/// the line of its left-hand side.
++#[config_type]
++pub enum AssignmentRhsBreak {
++    /// Use the heuristics of rustfmt, which often move the right-hand side to the next line.
++    Heuristic,
++    /// Keep a right-hand side that ends in a delimited expression, such as a call, a tuple, a
++    /// struct literal, an array or a macro call, or in a delimited type, such as generic
++    /// arguments, a tuple or a slice, on the line of the left-hand side and break inside its
++    /// trailing delimiter.
++    TrailingDelimiter,
++    /// Start every right-hand side on the line of its `=`, `=>` or `:` and break it only inside
++    /// itself, and let the line grow past `max_width` where it cannot break at all.
++    SameLine,
++}
++
+ /// Controls how rustfmt should handle leading pipes on match arms.
+ #[config_type]
+ pub enum MatchArmLeadingPipe {
+@@ -661,6 +677,7 @@ config_option_with_style_edition_default!(
+     CombineControlExpr, bool, _ => true;
+     ShortArrayElementWidthThreshold, usize, _ => 10;
+     OverflowDelimitedExpr, bool, _ => false;
++    AssignmentRhsBreakConfig, AssignmentRhsBreak, _ => AssignmentRhsBreak::Heuristic;
+     StructFieldAlignThreshold, usize, _ => 0;
+     EnumDiscrimAlignThreshold, usize, _ => 0;
+     MatchArmBlocks, bool, _ => true;
+diff --git a/src/tools/rustfmt/src/expr.rs b/src/tools/rustfmt/src/expr.rs
+index 8a3674b..e65b3a5 100644
+--- a/src/tools/rustfmt/src/expr.rs
++++ b/src/tools/rustfmt/src/expr.rs
+@@ -13,7 +13,9 @@ use crate::comment::{
+     CharClasses, FindUncommented, combine_strs_with_missing_comments, contains_comment,
+     recover_comment_removed, rewrite_comment, rewrite_missing_comment,
+ };
+-use crate::config::{Config, ControlBraceStyle, HexLiteralCase, IndentStyle, StyleEdition};
++use crate::config::{
++    AssignmentRhsBreak, Config, ControlBraceStyle, HexLiteralCase, IndentStyle, StyleEdition,
++};
+ use crate::config::{FloatLiteralTrailingZero, lists::*};
+ use crate::lists::{
+     ListFormatting, Separator, definitive_tactic, itemize_list, shape_for_tactic,
+@@ -1967,6 +1969,12 @@ pub(crate) fn rewrite_field(
+                 Ok(attrs_str + name)
+             }
+             Ok(e) => Ok(format!("{attrs_str}{name}{separator}{e}")),
++            Err(error) if context.config.assignment_rhs_break() == AssignmentRhsBreak::SameLine => {
++                rewrite_on_same_line(expr_shape, Err(error), |shape| {
++                    field.expr.rewrite_result(context, shape)
++                })
++                .map(|e| format!("{attrs_str}{name}{separator}{e}"))
++            }
+             Err(_) => {
+                 let expr_offset = shape.indent.block_indent(context.config);
+                 let expr = field
+@@ -2147,7 +2155,7 @@ fn rewrite_unary_op(
+ pub(crate) enum RhsAssignKind<'ast> {
+     Expr(&'ast ast::ExprKind, #[allow(dead_code)] Span),
+     Bounds,
+-    Ty,
++    Ty(&'ast ast::TyKind),
+ }
+ 
+ impl<'ast> RhsAssignKind<'ast> {
+@@ -2308,7 +2316,7 @@ fn choose_rhs<R: Rewrite>(
+     expr: &R,
+     shape: Shape,
+     orig_rhs: RewriteResult,
+-    _rhs_kind: &RhsAssignKind<'_>,
++    rhs_kind: &RhsAssignKind<'_>,
+     rhs_tactics: RhsTactics,
+     has_rhs_comment: bool,
+ ) -> RewriteResult {
+@@ -2317,6 +2325,11 @@ fn choose_rhs<R: Rewrite>(
+         Ok(ref new_str) if !new_str.contains('\n') && unicode_str_width(new_str) <= shape.width => {
+             Ok(format!(" {new_str}"))
+         }
++        _ if context.config.assignment_rhs_break() == AssignmentRhsBreak::SameLine => {
++            let before_space_str = if has_rhs_comment { "" } else { " " };
++            rewrite_on_same_line(shape, orig_rhs, |shape| expr.rewrite_result(context, shape))
++                .map(|rhs| format!("{before_space_str}{rhs}"))
++        }
+         _ => {
+             // Expression did not fit on the same line as the identifier.
+             // Try splitting the line and see if that works better.
+@@ -2339,7 +2352,8 @@ fn choose_rhs<R: Rewrite>(
+                     Ok(format!("{before_space_str}{orig_rhs}"))
+                 }
+                 (Ok(ref orig_rhs), Ok(ref new_rhs))
+-                    if prefer_next_line(orig_rhs, new_rhs, rhs_tactics) =>
++                    if prefer_next_line(orig_rhs, new_rhs, rhs_tactics)
++                        && !keeps_trailing_delimiter(context, rhs_kind, orig_rhs) =>
+                 {
+                     Ok(format!("{new_indent_str}{new_rhs}"))
+                 }
+@@ -2359,6 +2373,123 @@ fn choose_rhs<R: Rewrite>(
+     }
+ }
+ 
++/// Returns `rewrite`, the rewrite in `shape` on the line of the `=`, `=>` or `:` in front of it, if
++/// it succeeded without breaking inside an empty pair of delimiters. Otherwise `rewrite_in`
++/// rewrites it on that line again, with one, two, four and more columns beyond `shape` each time,
++/// until a rewrite succeeds that way, and at last without any limit. So where nothing fits, the
++/// line grows past `max_width` about as little as it can instead of breaking after its `=`, `=>` or
++/// `:`.
++pub(crate) fn rewrite_on_same_line(
++    shape: Shape,
++    rewrite: RewriteResult,
++    rewrite_in: impl Fn(Shape) -> RewriteResult,
++) -> RewriteResult {
++    if let Ok(ref result) = rewrite {
++        if !breaks_empty_delimiter(result) {
++            return rewrite;
++        }
++    }
++    let infinite_shape = shape.infinite_width();
++    let mut extra_width = 1;
++    while shape.width + extra_width < infinite_shape.width {
++        let wider_shape = Shape {
++            width: shape.width + extra_width,
++            ..shape
++        };
++        match rewrite_in(wider_shape) {
++            Ok(result) if !breaks_empty_delimiter(&result) => return Ok(result),
++            _ => extra_width *= 2,
++        }
++    }
++    rewrite_in(infinite_shape)
++}
++
++/// Returns true if a line of `rewrite` ends in an opening delimiter that the next line closes at
++/// its start, as `(` and `)` of a call without arguments do where a shape is too narrow for both.
++fn breaks_empty_delimiter(rewrite: &str) -> bool {
++    let lines = rewrite.lines().map(str::trim).collect::<Vec<_>>();
++    lines.windows(2).any(|pair| {
++        [('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')]
++            .iter()
++            .any(|&(opening, closing)| pair[0].ends_with(opening) && pair[1].starts_with(closing))
++    })
++}
++
++/// Returns `shape` with `width` taken off its first line, or a shape without any room on that line
++/// where `shape` is narrower than `width`.
++pub(crate) fn shape_after(shape: Shape, width: usize) -> Shape {
++    shape.offset_left_opt(width).unwrap_or(Shape {
++        width: 0,
++        offset: shape.offset + width,
++        ..shape
++    })
++}
++
++/// Returns true if `assignment_rhs_break` is `TrailingDelimiter`, the rhs ends in a delimited
++/// expression or type and `orig_rhs`, the rhs formatted on the line of the lhs, opens that delimiter at
++/// the end of its first line, closes it on its last line and holds at least one line between
++/// them, so an empty `()` never breaks.
++fn keeps_trailing_delimiter(
++    context: &RewriteContext<'_>,
++    rhs_kind: &RhsAssignKind<'_>,
++    orig_rhs: &str,
++) -> bool {
++    if context.config.assignment_rhs_break() != AssignmentRhsBreak::TrailingDelimiter {
++        return false;
++    }
++    let delimited_rhs = match rhs_kind {
++        RhsAssignKind::Expr(kind, _) => ends_in_delimited_expr(kind),
++        RhsAssignKind::Ty(kind) => ends_in_delimited_ty(kind),
++        RhsAssignKind::Bounds => false,
++    };
++    if !delimited_rhs {
++        return false;
++    }
++    let (Some(first_line), Some(last_line)) = (orig_rhs.lines().next(), orig_rhs.lines().last())
++    else {
++        return false;
++    };
++    let last_line = last_line.trim();
++    count_newlines(orig_rhs) >= 2
++        && first_line.ends_with(['(', '[', '{', '<'])
++        && last_line.starts_with([')', ']', '}', '>'])
++        && last_line.chars().all(|c| matches!(c, ')' | ']' | '}' | '>' | '?'))
++}
++
++/// Returns true if the expression ends in the delimiter of a call, a tuple, a struct literal, an
++/// array or a macro call, also behind any number of `?`.
++fn ends_in_delimited_expr(kind: &ast::ExprKind) -> bool {
++    match kind {
++        ast::ExprKind::Try(ref inner) => ends_in_delimited_expr(&inner.kind),
++        ast::ExprKind::Call(..)
++        | ast::ExprKind::MethodCall(..)
++        | ast::ExprKind::Tup(..)
++        | ast::ExprKind::Struct(..)
++        | ast::ExprKind::Array(..)
++        | ast::ExprKind::MacCall(..) => true,
++        _ => false,
++    }
++}
++
++/// Returns true if the type can end in the delimiter of its generic arguments, a tuple, an array,
++/// a slice or the parameters of a function pointer, also behind any number of references and
++/// pointers.
++fn ends_in_delimited_ty(kind: &ast::TyKind) -> bool {
++    match kind {
++        ast::TyKind::Ref(_, ref mut_ty)
++        | ast::TyKind::PinnedRef(_, ref mut_ty)
++        | ast::TyKind::Ptr(ref mut_ty) => ends_in_delimited_ty(&mut_ty.ty.kind),
++        ast::TyKind::Path(..)
++        | ast::TyKind::Tup(..)
++        | ast::TyKind::Array(..)
++        | ast::TyKind::Slice(..)
++        | ast::TyKind::FnPtr(..)
++        | ast::TyKind::TraitObject(..)
++        | ast::TyKind::ImplTrait(..) => true,
++        _ => false,
++    }
++}
++
+ fn shape_from_rhs_tactic(
+     context: &RewriteContext<'_>,
+     shape: Shape,
+diff --git a/src/tools/rustfmt/src/items.rs b/src/tools/rustfmt/src/items.rs
+index 8b749c4..5db789f 100644
+--- a/src/tools/rustfmt/src/items.rs
++++ b/src/tools/rustfmt/src/items.rs
+@@ -15,11 +15,11 @@ use crate::comment::{
+     recover_comment_removed, recover_missing_comment_in_span, rewrite_missing_comment,
+ };
+ use crate::config::lists::*;
+-use crate::config::{BraceStyle, Config, IndentStyle, StyleEdition};
++use crate::config::{AssignmentRhsBreak, BraceStyle, Config, IndentStyle, StyleEdition};
+ use crate::expr::{
+     RhsAssignKind, RhsTactics, is_empty_block, is_simple_block_stmt, rewrite_assign_rhs,
+     rewrite_assign_rhs_with, rewrite_assign_rhs_with_comments, rewrite_else_kw_with_comments,
+-    rewrite_let_else_block,
++    rewrite_let_else_block, rewrite_on_same_line,
+ };
+ use crate::lists::{ListFormatting, Separator, definitive_tactic, itemize_list, write_list};
+ use crate::macros::{MacroPosition, rewrite_macro};
+@@ -1703,6 +1703,7 @@ pub(crate) fn rewrite_type_alias<'a>(
+         ref after_where_clause,
+     } = *ty_alias_kind;
+     let ty_opt = ty.as_ref();
++    let ty_rhs_kind = ty_opt.map_or(RhsAssignKind::Bounds, |ty| RhsAssignKind::Ty(&ty.kind));
+     let rhs_hi = ty
+         .as_ref()
+         .map_or(generics.where_clause.span.hi(), |ty| ty.span.hi());
+@@ -1715,10 +1716,10 @@ pub(crate) fn rewrite_type_alias<'a>(
+     match (visitor_kind, &op_ty) {
+         (Item | AssocTraitItem | ForeignItem, Some(op_bounds)) => {
+             let op = OpaqueType { bounds: op_bounds };
+-            rewrite_ty(rw_info, Some(bounds), Some(&op), rhs_hi, vis)
++            rewrite_ty(rw_info, Some(bounds), Some(&op), &RhsAssignKind::Bounds, rhs_hi, vis)
+         }
+         (Item | AssocTraitItem | ForeignItem, None) => {
+-            rewrite_ty(rw_info, Some(bounds), ty_opt, rhs_hi, vis)
++            rewrite_ty(rw_info, Some(bounds), ty_opt, &ty_rhs_kind, rhs_hi, vis)
+         }
+         (AssocImplItem, _) => {
+             let result = if let Some(op_bounds) = op_ty {
+@@ -1727,11 +1728,12 @@ pub(crate) fn rewrite_type_alias<'a>(
+                     rw_info,
+                     Some(bounds),
+                     Some(&op),
++                    &RhsAssignKind::Bounds,
+                     rhs_hi,
+                     &DEFAULT_VISIBILITY,
+                 )
+             } else {
+-                rewrite_ty(rw_info, Some(bounds), ty_opt, rhs_hi, vis)
++                rewrite_ty(rw_info, Some(bounds), ty_opt, &ty_rhs_kind, rhs_hi, vis)
+             }?;
+             match defaultness {
+                 ast::Defaultness::Default(..) => Ok(format!("default {result}")),
+@@ -1745,6 +1747,7 @@ fn rewrite_ty<R: Rewrite>(
+     rw_info: &TyAliasRewriteInfo<'_, '_>,
+     generic_bounds_opt: Option<&ast::GenericBounds>,
+     rhs: Option<&R>,
++    rhs_kind: &RhsAssignKind<'_>,
+     // the span of the end of the RHS (or the end of the generics, if there is no RHS)
+     rhs_hi: BytePos,
+     vis: &ast::Visibility,
+@@ -1852,7 +1855,7 @@ fn rewrite_ty<R: Rewrite>(
+         } else {
+             shape
+         };
+-        rewrite_assign_rhs(context, lhs, &*ty, &RhsAssignKind::Ty, shape)?
++        rewrite_assign_rhs(context, lhs, &*ty, rhs_kind, shape)?
+     } else {
+         result
+     };
+@@ -1973,7 +1976,13 @@ pub(crate) fn rewrite_struct_field(
+ 
+     let is_prefix_empty = prefix.is_empty();
+     // We must use multiline. We are going to put attributes and a field on different lines.
+-    let field_str = rewrite_assign_rhs(context, prefix, &*field.ty, &RhsAssignKind::Ty, shape)?;
++    let field_str = rewrite_assign_rhs(
++        context,
++        prefix,
++        &*field.ty,
++        &RhsAssignKind::Ty(&field.ty.kind),
++        shape,
++    )?;
+     // Remove a leading white-space from `rewrite_assign_rhs()` when rewriting a tuple struct.
+     let field_str = if is_prefix_empty {
+         field_str.trim_start()
+@@ -2134,6 +2143,13 @@ fn rewrite_static(
+         Shape::indented(offset.block_only(), context.config).offset_left_opt(prefix.len() + 2)?;
+     let ty_str = match static_parts.ty.rewrite(context, ty_shape) {
+         Some(ty_str) => ty_str,
++        None if context.config.assignment_rhs_break() == AssignmentRhsBreak::SameLine => {
++            let ty_rewrite = Err(RewriteError::Unknown);
++            rewrite_on_same_line(ty_shape, ty_rewrite, |shape| {
++                static_parts.ty.rewrite_result(context, shape)
++            })
++            .ok()?
++        }
+         None => {
+             if prefix.ends_with(' ') {
+                 prefix.pop();
+@@ -3505,7 +3521,7 @@ impl Rewrite for ast::ForeignItem {
+                     context,
+                     prefix,
+                     &static_foreign_item.ty,
+-                    &RhsAssignKind::Ty,
++                    &RhsAssignKind::Ty(&static_foreign_item.ty.kind),
+                     shape.sub_width(1, static_foreign_item.ty.span)?,
+                 )
+                 .map(|s| s + ";")
+diff --git a/src/tools/rustfmt/src/matches.rs b/src/tools/rustfmt/src/matches.rs
+index 50c0db8..b168462 100644
+--- a/src/tools/rustfmt/src/matches.rs
++++ b/src/tools/rustfmt/src/matches.rs
+@@ -8,10 +8,12 @@ use tracing::debug;
+ 
+ use crate::comment::{FindUncommented, combine_strs_with_missing_comments, rewrite_comment};
+ use crate::config::lists::*;
+-use crate::config::{Config, ControlBraceStyle, IndentStyle, MatchArmLeadingPipe, StyleEdition};
++use crate::config::{
++    AssignmentRhsBreak, Config, ControlBraceStyle, IndentStyle, MatchArmLeadingPipe, StyleEdition,
++};
+ use crate::expr::{
+     ExprType, RhsTactics, format_expr, is_empty_block, is_simple_block, is_unsafe_block,
+-    prefer_next_line, rewrite_cond,
++    prefer_next_line, rewrite_cond, rewrite_on_same_line, shape_after,
+ };
+ use crate::lists::{ListFormatting, itemize_list, write_list};
+ use crate::rewrite::{Rewrite, RewriteContext, RewriteError, RewriteErrorExt, RewriteResult};
+@@ -432,8 +434,9 @@ fn rewrite_match_body(
+         shape.indent
+     };
+ 
+-    let forbid_same_line =
+-        (has_guard && pats_str.contains('\n') && !is_empty_block) || !body.attrs.is_empty();
++    let same_line = context.config.assignment_rhs_break() == AssignmentRhsBreak::SameLine;
++    let forbid_same_line = (has_guard && pats_str.contains('\n') && !is_empty_block && !same_line)
++        || !body.attrs.is_empty();
+ 
+     // Look for comments between `=>` and the start of the body.
+     let arrow_comment = {
+@@ -541,6 +544,22 @@ fn rewrite_match_body(
+     };
+     let orig_budget = orig_body_shape.map_or(0, |shape| shape.width);
+ 
++    // With `assignment_rhs_break = "SameLine"`, a body that the next line would leave `=>` alone
++    // for, a block or a body without the block of an arm, stays on the line of `=>`.
++    let arm_block = context.config.match_arm_blocks() && !context.inside_macro();
++    if same_line && !forbid_same_line && arrow_comment.is_empty() && (is_block || !arm_block) {
++        // 4 = ` => `.len()
++        let body_shape =
++            shape_after(shape, extra_offset(pats_str, shape) + 4).saturating_sub_width(comma.len());
++        let body_str = rewrite_on_same_line(body_shape, orig_body, |shape| {
++            nop_block_collapse(
++                format_expr(body, ExprType::Statement, context, shape),
++                shape.width,
++            )
++        })?;
++        return combine_orig_body(&body_str);
++    }
++
+     // Try putting body on the next line and see if it looks better.
+     let next_line_body_shape = Shape::indented(next_line_indent, context.config);
+     let next_line_body = nop_block_collapse(
+diff --git a/src/tools/rustfmt/src/patterns.rs b/src/tools/rustfmt/src/patterns.rs
+index 0a9ff47..61533f1 100644
+--- a/src/tools/rustfmt/src/patterns.rs
++++ b/src/tools/rustfmt/src/patterns.rs
+@@ -2,9 +2,12 @@ use rustc_ast::ast::{self, BindingMode, ByRef, Pat, PatField, PatKind, RangeEnd,
+ use rustc_span::{BytePos, Span};
+ 
+ use crate::comment::{FindUncommented, combine_strs_with_missing_comments};
+-use crate::config::StyleEdition;
+ use crate::config::lists::*;
+-use crate::expr::{can_be_overflowed_expr, rewrite_unary_prefix, wrap_struct_field};
++use crate::config::{AssignmentRhsBreak, StyleEdition};
++use crate::expr::{
++    can_be_overflowed_expr, rewrite_on_same_line, rewrite_unary_prefix, shape_after,
++    wrap_struct_field,
++};
+ use crate::lists::{
+     ListFormatting, ListItem, Separator, definitive_tactic, itemize_list, shape_for_tactic,
+     struct_lit_formatting, struct_lit_shape, struct_lit_tactic, write_list,
+@@ -517,6 +520,14 @@ impl Rewrite for PatField {
+             let one_line_width = id_str.len() + 2 + pat_str.len();
+             let pat_and_id_str = if one_line_width <= shape.width {
+                 format!("{id_str}: {pat_str}")
++            } else if context.config.assignment_rhs_break() == AssignmentRhsBreak::SameLine {
++                // 2 = `: `
++                let pat_shape = shape_after(shape, id_str.len() + 2);
++                let pat_rewrite = self.pat.rewrite_result(context, pat_shape);
++                let pat_str = rewrite_on_same_line(pat_shape, pat_rewrite, |shape| {
++                    self.pat.rewrite_result(context, shape)
++                })?;
++                format!("{id_str}: {pat_str}")
+             } else {
+                 format!(
+                     "{}:\n{}{}",
+diff --git b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/heuristic.rs b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/heuristic.rs
+new file mode 100644
+index 0000000..1c370c1
+--- /dev/null
++++ b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/heuristic.rs
+@@ -0,0 +1,30 @@
++// rustfmt-assignment_rhs_break: Heuristic
++// Where to break the right-hand side of an assignment
++
++const LOOKUP_TABLE_OF_NAMES: [&str; 4] = ["first_name_value", "second_name_value", "third_name_value", "x"];
++
++fn main() {
++    {
++        {
++            {
++                {
++                    let embodiment = Embodiment::try_from((content, character, session, current_instant))?;
++                    let embodiment_value = Embodiment::from_parts(content, character, session, instant_x);
++                    let embodiment_value = receiver.from_parts(content, character, session, instant_xx);
++                    let embodiment_value = Embodiment { content, character, session, current_instant };
++                    let embodiment_value = [content_value, character_value, session_value, instant_x];
++                    let embodiment_value = vec![content_value, character_value, session_value, instant];
++                    let embodiment_value = (content_value, character_value, session_value, instant_xx);
++                    embodiment_value = Embodiment::from_parts(content, character, session, instant_xxxx);
++                    embodiment_value += Embodiment::from_parts(content, character, session, instant_xxx);
++                    let embodiment_value = if condition_long { content_value } else { character_valu };
++                    let embodiment_value = receiver_value.content().character().session(instant_xxx);
++                    let embodiment_value = first_function(content) + second_function(character, sess);
++                    let embodiment_value = Embodiment::from_parts(content, character, session, instant_x).await;
++                    let embodiment_value = crate::tests::fixture::activity_kinds::activity_kinds_factory_name();
++                    let embodiment_value = fixture::failure_texts_factory(&failure_seam, || { Store::try_from(&mut context) });
++                }
++            }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/heuristic_type.rs b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/heuristic_type.rs
+new file mode 100644
+index 0000000..44785a2
+--- /dev/null
++++ b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/heuristic_type.rs
+@@ -0,0 +1,34 @@
++// rustfmt-assignment_rhs_break: Heuristic
++// Where to break a type behind the `:` of a field or the `=` of a type alias
++
++struct Holder<'onset> {
++    pub(super) package_supply: &'onset PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterType>,
++    pub(super) package_tuple: (ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, TypesetterTyp),
++    pub(super) package_array: [PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterTy>; 4],
++    pub(super) package_slice: &'onset [PackageSupply<ContentType, AssetsType, TypefaceType, Typeset>],
++    pub(super) package_function: fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Typeset),
++    pub(super) package_object: Box<dyn Fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue) -> X>,
++    pub(super) package_short: Vec<u8>,
++}
++struct TupleHolder(pub(super) PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>);
++type PackageAlias = PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, M>;
++const PACKAGE_CONSTANT: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter> = x;
++fn package(package_supply: &'onset PackageSupplyLongName<ContentType, AssetsType, TypefaceType, T>) {}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Ty> = value;
++    }
++}
++
++type PackageAlias = PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>;
++pub(super) type PackageAlias<'onset> = &'onset (ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Ty);
++const PACKAGE_CONSTANT: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, More> = x;
++static PACKAGE_STATIC: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, More> = x;
++extern "C" {
++    static PACKAGE_FOREIGN: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, M>;
++}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType> = value;
++    }
++}
+diff --git b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line.rs b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line.rs
+new file mode 100644
+index 0000000..0757b8f
+--- /dev/null
++++ b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line.rs
+@@ -0,0 +1,42 @@
++// rustfmt-assignment_rhs_break: SameLine
++// Where to break the right-hand side of an assignment
++
++const LOOKUP_TABLE_OF_NAMES: [&str; 4] = ["first_name_value", "second_name_value", "third_name_value", "x"];
++
++fn main() {
++    {
++        {
++            {
++                {
++                    let embodiment = Embodiment::try_from((content, character, session, current_instant))?;
++                    let embodiment_value = Embodiment::from_parts(content, character, session, instant_x);
++                    let embodiment_value = receiver.from_parts(content, character, session, instant_xx);
++                    let embodiment_value = Embodiment { content, character, session, current_instant };
++                    let embodiment_value = [content_value, character_value, session_value, instant_x];
++                    let embodiment_value = vec![content_value, character_value, session_value, instant];
++                    let embodiment_value = (content_value, character_value, session_value, instant_xx);
++                    embodiment_value = Embodiment::from_parts(content, character, session, instant_xxxx);
++                    embodiment_value += Embodiment::from_parts(content, character, session, instant_xxx);
++                    let embodiment_value = if condition_long { content_value } else { character_valu };
++                    let embodiment_value = receiver_value.content().character().session(instant_xxx);
++                    let embodiment_value = first_function(content) + second_function(character, sess);
++                    let embodiment_value = Embodiment::from_parts(content, character, session, instant_x).await;
++                    let embodiment_value = crate::tests::fixture::activity_kinds::activity_kinds_factory_name();
++                    let embodiment_value = fixture::failure_texts_factory(&failure_seam, || { Store::try_from(&mut context) });
++                    let curve_value_of_the_light = curve_base_value * EncodedIntensity::CURVE_SCALE - EncodedIntensity::CURVE_OFFSET;
++                    let edge_millimeters = |millimeters: i128| millimeters.clamp(least_millimeters, greatest_millimeters) as u64;
++                    let expectation = "detail level 1 is 4 by 4 pixels, but half of the level before it is 2 by 2 pixels";
++                    let maybe_moment_milliseconds = playback_milliseconds.checked_rem(duration_milliseconds_value);
++                    let activity_kinds = crate::tests::fixture::activity_kinds::activity_kinds_factory();
++                    let [lowest_x_axis, lowest_y_axis, highest_x_axis, highest_y_axis] = footprint_millimeters;
++                    let Embodiment { content, character, session, instant } = embodiment_value.clone();
++                    if let Some(maybe_moment_milliseconds) = playback_milliseconds.checked_rem(duration) {
++                        moment_value = maybe_moment_milliseconds;
++                    }
++                    let embodiment_value = Embodiment { content: content_value.clone(), character: crate::tests::fixture::character_factory(), session };
++                    let Embodiment { content: Content { content_name, content_kind }, character: Character { character_name, character_level }, .. } = embodiment_value;
++                }
++            }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line_match.rs b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line_match.rs
+new file mode 100644
+index 0000000..318eed2
+--- /dev/null
++++ b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line_match.rs
+@@ -0,0 +1,18 @@
++// rustfmt-assignment_rhs_break: SameLine
++// Where to break the body of a match arm
++
++fn main() {
++    {
++        {
++            match vacancy_value {
++                Some(last_vacancy)
++                    if last_vacancy.compose_end_element() == vacancy.first_element_of_the_page() =>
++                {
++                    page_index = last_vacancy.page_index();
++                }
++                Some(other_vacancy) => compose_the_vacancy_of_the_page(other_vacancy, page_index_value, x),
++                None => 2,
++            }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line_match_without_arm_blocks.rs b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line_match_without_arm_blocks.rs
+new file mode 100644
+index 0000000..2eddead
+--- /dev/null
++++ b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line_match_without_arm_blocks.rs
+@@ -0,0 +1,11 @@
++// rustfmt-assignment_rhs_break: SameLine
++// rustfmt-match_arm_blocks: false
++// Where to break the body of a match arm that gets no block
++
++fn main() {
++    {
++        {
++            match vacancy_kind { VacancyKind::Small => compose_the_small_vacancy_of_the_page_value(page_index_value, index), VacancyKind::Large => 2 }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line_type.rs b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line_type.rs
+new file mode 100644
+index 0000000..7461209
+--- /dev/null
++++ b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/same_line_type.rs
+@@ -0,0 +1,50 @@
++// rustfmt-assignment_rhs_break: SameLine
++// Where to break a type behind the `:` of a field or the `=` of a type alias
++
++struct Holder<'onset> {
++    pub(super) package_supply: &'onset PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterType>,
++    pub(super) package_tuple: (ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, TypesetterTyp),
++    pub(super) package_array: [PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterTy>; 4],
++    pub(super) package_slice: &'onset [PackageSupply<ContentType, AssetsType, TypefaceType, Typeset>],
++    pub(super) package_function: fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Typeset),
++    pub(super) package_object: Box<dyn Fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue) -> X>,
++    pub(super) package_short: Vec<u8>,
++}
++struct TupleHolder(pub(super) PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>);
++type PackageAlias = PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, M>;
++const PACKAGE_CONSTANT: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter> = x;
++fn package(package_supply: &'onset PackageSupplyLongName<ContentType, AssetsType, TypefaceType, T>) {}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Ty> = value;
++    }
++}
++
++type PackageAlias = PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>;
++pub(super) type PackageAlias<'onset> = &'onset (ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Ty);
++const PACKAGE_CONSTANT: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, More> = x;
++static PACKAGE_STATIC: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, More> = x;
++extern "C" {
++    static PACKAGE_FOREIGN: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, M>;
++}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType> = value;
++    }
++}
++
++struct VisibleHolder {
++    pub(in crate::graphics_processing_unit::scenery_list::roster_list) part_anchor: PartAnchor,
++    pub(in crate::graphics_processing_unit::scenery_list::roster_list) pose_record: PoseRecordOfThePart,
++}
++pub(in crate::graphics_processing_unit::scenery_list::roster_list) const MOTION_WORD_COUNT: usize = 32;
++pub(in crate::renderer) const STATE_BYTE_COUNT: usize = ParticleFrame::PARTICLE_STATE_BYTE_COUNT_VALUE;
++
++pub trait Platform: PackagePlatform + ChoicePlatform + GraphicsPlatform + SoundPlatform + TextPlatform {}
++
++impl<FrameAdvancerType, CauseType> Window for WindowValue<FrameAdvancerType, CauseType>
++where
++    FrameAdvancerType: for<'frame> FrameAdvancer<Self::FrameWindowType<'frame>, Error = CauseType> + 'static,
++    CauseType: error::Error + Send + Sync + 'static,
++{
++}
+diff --git b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/trailing_delimiter.rs b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/trailing_delimiter.rs
+new file mode 100644
+index 0000000..565166a
+--- /dev/null
++++ b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/trailing_delimiter.rs
+@@ -0,0 +1,30 @@
++// rustfmt-assignment_rhs_break: TrailingDelimiter
++// Where to break the right-hand side of an assignment
++
++const LOOKUP_TABLE_OF_NAMES: [&str; 4] = ["first_name_value", "second_name_value", "third_name_value", "x"];
++
++fn main() {
++    {
++        {
++            {
++                {
++                    let embodiment = Embodiment::try_from((content, character, session, current_instant))?;
++                    let embodiment_value = Embodiment::from_parts(content, character, session, instant_x);
++                    let embodiment_value = receiver.from_parts(content, character, session, instant_xx);
++                    let embodiment_value = Embodiment { content, character, session, current_instant };
++                    let embodiment_value = [content_value, character_value, session_value, instant_x];
++                    let embodiment_value = vec![content_value, character_value, session_value, instant];
++                    let embodiment_value = (content_value, character_value, session_value, instant_xx);
++                    embodiment_value = Embodiment::from_parts(content, character, session, instant_xxxx);
++                    embodiment_value += Embodiment::from_parts(content, character, session, instant_xxx);
++                    let embodiment_value = if condition_long { content_value } else { character_valu };
++                    let embodiment_value = receiver_value.content().character().session(instant_xxx);
++                    let embodiment_value = first_function(content) + second_function(character, sess);
++                    let embodiment_value = Embodiment::from_parts(content, character, session, instant_x).await;
++                    let embodiment_value = crate::tests::fixture::activity_kinds::activity_kinds_factory_name();
++                    let embodiment_value = fixture::failure_texts_factory(&failure_seam, || { Store::try_from(&mut context) });
++                }
++            }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/trailing_delimiter_type.rs b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/trailing_delimiter_type.rs
+new file mode 100644
+index 0000000..ef909df
+--- /dev/null
++++ b/src/tools/rustfmt/tests/source/configs/assignment_rhs_break/trailing_delimiter_type.rs
+@@ -0,0 +1,34 @@
++// rustfmt-assignment_rhs_break: TrailingDelimiter
++// Where to break a type behind the `:` of a field or the `=` of a type alias
++
++struct Holder<'onset> {
++    pub(super) package_supply: &'onset PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterType>,
++    pub(super) package_tuple: (ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, TypesetterTyp),
++    pub(super) package_array: [PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterTy>; 4],
++    pub(super) package_slice: &'onset [PackageSupply<ContentType, AssetsType, TypefaceType, Typeset>],
++    pub(super) package_function: fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Typeset),
++    pub(super) package_object: Box<dyn Fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue) -> X>,
++    pub(super) package_short: Vec<u8>,
++}
++struct TupleHolder(pub(super) PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>);
++type PackageAlias = PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, M>;
++const PACKAGE_CONSTANT: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter> = x;
++fn package(package_supply: &'onset PackageSupplyLongName<ContentType, AssetsType, TypefaceType, T>) {}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Ty> = value;
++    }
++}
++
++type PackageAlias = PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>;
++pub(super) type PackageAlias<'onset> = &'onset (ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Ty);
++const PACKAGE_CONSTANT: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, More> = x;
++static PACKAGE_STATIC: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, More> = x;
++extern "C" {
++    static PACKAGE_FOREIGN: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, M>;
++}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType> = value;
++    }
++}
+diff --git b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/heuristic.rs b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/heuristic.rs
+new file mode 100644
+index 0000000..eaeba7a
+--- /dev/null
++++ b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/heuristic.rs
+@@ -0,0 +1,58 @@
++// rustfmt-assignment_rhs_break: Heuristic
++// Where to break the right-hand side of an assignment
++
++const LOOKUP_TABLE_OF_NAMES: [&str; 4] = [
++    "first_name_value",
++    "second_name_value",
++    "third_name_value",
++    "x",
++];
++
++fn main() {
++    {
++        {
++            {
++                {
++                    let embodiment =
++                        Embodiment::try_from((content, character, session, current_instant))?;
++                    let embodiment_value =
++                        Embodiment::from_parts(content, character, session, instant_x);
++                    let embodiment_value =
++                        receiver.from_parts(content, character, session, instant_xx);
++                    let embodiment_value = Embodiment {
++                        content,
++                        character,
++                        session,
++                        current_instant,
++                    };
++                    let embodiment_value =
++                        [content_value, character_value, session_value, instant_x];
++                    let embodiment_value =
++                        vec![content_value, character_value, session_value, instant];
++                    let embodiment_value =
++                        (content_value, character_value, session_value, instant_xx);
++                    embodiment_value =
++                        Embodiment::from_parts(content, character, session, instant_xxxx);
++                    embodiment_value +=
++                        Embodiment::from_parts(content, character, session, instant_xxx);
++                    let embodiment_value = if condition_long {
++                        content_value
++                    } else {
++                        character_valu
++                    };
++                    let embodiment_value =
++                        receiver_value.content().character().session(instant_xxx);
++                    let embodiment_value =
++                        first_function(content) + second_function(character, sess);
++                    let embodiment_value =
++                        Embodiment::from_parts(content, character, session, instant_x).await;
++                    let embodiment_value =
++                        crate::tests::fixture::activity_kinds::activity_kinds_factory_name();
++                    let embodiment_value = fixture::failure_texts_factory(&failure_seam, || {
++                        Store::try_from(&mut context)
++                    });
++                }
++            }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/heuristic_type.rs b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/heuristic_type.rs
+new file mode 100644
+index 0000000..a645791
+--- /dev/null
++++ b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/heuristic_type.rs
+@@ -0,0 +1,70 @@
++// rustfmt-assignment_rhs_break: Heuristic
++// Where to break a type behind the `:` of a field or the `=` of a type alias
++
++struct Holder<'onset> {
++    pub(super) package_supply:
++        &'onset PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterType>,
++    pub(super) package_tuple: (
++        ContentTypeValue,
++        AssetsTypeValue,
++        TypefaceTypeValue,
++        TypesetterTyp,
++    ),
++    pub(super) package_array:
++        [PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterTy>; 4],
++    pub(super) package_slice:
++        &'onset [PackageSupply<ContentType, AssetsType, TypefaceType, Typeset>],
++    pub(super) package_function: fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Typeset),
++    pub(super) package_object:
++        Box<dyn Fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue) -> X>,
++    pub(super) package_short: Vec<u8>,
++}
++struct TupleHolder(
++    pub(super) PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>,
++);
++type PackageAlias = PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, M>;
++const PACKAGE_CONSTANT: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter> =
++    x;
++fn package(
++    package_supply: &'onset PackageSupplyLongName<ContentType, AssetsType, TypefaceType, T>,
++) {
++}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Ty> =
++            value;
++    }
++}
++
++type PackageAlias =
++    PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>;
++pub(super) type PackageAlias<'onset> =
++    &'onset (ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Ty);
++const PACKAGE_CONSTANT: PackageSupplyLongName<
++    ContentType,
++    AssetsType,
++    TypefaceType,
++    Typesetter,
++    More,
++> = x;
++static PACKAGE_STATIC: PackageSupplyLongName<
++    ContentType,
++    AssetsType,
++    TypefaceType,
++    Typesetter,
++    More,
++> = x;
++extern "C" {
++    static PACKAGE_FOREIGN:
++        PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter, M>;
++}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<
++            ContentType,
++            AssetsType,
++            TypefaceType,
++            TypesetterType,
++        > = value;
++    }
++}
+diff --git b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line.rs b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line.rs
+new file mode 100644
+index 0000000..5a13365
+--- /dev/null
++++ b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line.rs
+@@ -0,0 +1,123 @@
++// rustfmt-assignment_rhs_break: SameLine
++// Where to break the right-hand side of an assignment
++
++const LOOKUP_TABLE_OF_NAMES: [&str; 4] = [
++    "first_name_value",
++    "second_name_value",
++    "third_name_value",
++    "x",
++];
++
++fn main() {
++    {
++        {
++            {
++                {
++                    let embodiment = Embodiment::try_from((
++                        content,
++                        character,
++                        session,
++                        current_instant,
++                    ))?;
++                    let embodiment_value = Embodiment::from_parts(
++                        content, character, session, instant_x,
++                    );
++                    let embodiment_value = receiver
++                        .from_parts(content, character, session, instant_xx);
++                    let embodiment_value = Embodiment {
++                        content,
++                        character,
++                        session,
++                        current_instant,
++                    };
++                    let embodiment_value = [
++                        content_value,
++                        character_value,
++                        session_value,
++                        instant_x,
++                    ];
++                    let embodiment_value = vec![
++                        content_value,
++                        character_value,
++                        session_value,
++                        instant,
++                    ];
++                    let embodiment_value = (
++                        content_value,
++                        character_value,
++                        session_value,
++                        instant_xx,
++                    );
++                    embodiment_value = Embodiment::from_parts(
++                        content,
++                        character,
++                        session,
++                        instant_xxxx,
++                    );
++                    embodiment_value += Embodiment::from_parts(
++                        content,
++                        character,
++                        session,
++                        instant_xxx,
++                    );
++                    let embodiment_value = if condition_long {
++                        content_value
++                    } else {
++                        character_valu
++                    };
++                    let embodiment_value = receiver_value
++                        .content()
++                        .character()
++                        .session(instant_xxx);
++                    let embodiment_value = first_function(content)
++                        + second_function(character, sess);
++                    let embodiment_value = Embodiment::from_parts(
++                        content, character, session, instant_x,
++                    )
++                    .await;
++                    let embodiment_value = crate::tests::fixture::activity_kinds::activity_kinds_factory_name();
++                    let embodiment_value = fixture::failure_texts_factory(&failure_seam, || {
++                        Store::try_from(&mut context)
++                    });
++                    let curve_value_of_the_light = curve_base_value * EncodedIntensity::CURVE_SCALE
++                        - EncodedIntensity::CURVE_OFFSET;
++                    let edge_millimeters = |millimeters: i128| {
++                        millimeters.clamp(least_millimeters, greatest_millimeters) as u64
++                    };
++                    let expectation = "detail level 1 is 4 by 4 pixels, but half of the level before it is 2 by 2 pixels";
++                    let maybe_moment_milliseconds = playback_milliseconds
++                        .checked_rem(duration_milliseconds_value);
++                    let activity_kinds = crate::tests::fixture::activity_kinds::activity_kinds_factory();
++                    let [lowest_x_axis, lowest_y_axis, highest_x_axis, highest_y_axis] = footprint_millimeters;
++                    let Embodiment {
++                        content,
++                        character,
++                        session,
++                        instant,
++                    } = embodiment_value.clone();
++                    if let Some(maybe_moment_milliseconds) = playback_milliseconds
++                        .checked_rem(duration)
++                    {
++                        moment_value = maybe_moment_milliseconds;
++                    }
++                    let embodiment_value = Embodiment {
++                        content: content_value.clone(),
++                        character: crate::tests::fixture::character_factory(),
++                        session,
++                    };
++                    let Embodiment {
++                        content: Content {
++                            content_name,
++                            content_kind,
++                        },
++                        character: Character {
++                            character_name,
++                            character_level,
++                        },
++                        ..
++                    } = embodiment_value;
++                }
++            }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line_match.rs b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line_match.rs
+new file mode 100644
+index 0000000..3a009a0
+--- /dev/null
++++ b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line_match.rs
+@@ -0,0 +1,20 @@
++// rustfmt-assignment_rhs_break: SameLine
++// Where to break the body of a match arm
++
++fn main() {
++    {
++        {
++            match vacancy_value {
++                Some(last_vacancy)
++                    if last_vacancy.compose_end_element()
++                        == vacancy.first_element_of_the_page() => {
++                    page_index = last_vacancy.page_index();
++                }
++                Some(other_vacancy) => {
++                    compose_the_vacancy_of_the_page(other_vacancy, page_index_value, x)
++                }
++                None => 2,
++            }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line_match_without_arm_blocks.rs b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line_match_without_arm_blocks.rs
+new file mode 100644
+index 0000000..bd39fbf
+--- /dev/null
++++ b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line_match_without_arm_blocks.rs
+@@ -0,0 +1,17 @@
++// rustfmt-assignment_rhs_break: SameLine
++// rustfmt-match_arm_blocks: false
++// Where to break the body of a match arm that gets no block
++
++fn main() {
++    {
++        {
++            match vacancy_kind {
++                VacancyKind::Small => compose_the_small_vacancy_of_the_page_value(
++                    page_index_value,
++                    index,
++                ),
++                VacancyKind::Large => 2,
++            }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line_type.rs b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line_type.rs
+new file mode 100644
+index 0000000..cc23fff
+--- /dev/null
++++ b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/same_line_type.rs
+@@ -0,0 +1,114 @@
++// rustfmt-assignment_rhs_break: SameLine
++// Where to break a type behind the `:` of a field or the `=` of a type alias
++
++struct Holder<'onset> {
++    pub(super) package_supply: &'onset PackageSupply<
++        ContentType,
++        AssetsType,
++        TypefaceType,
++        TypesetterType,
++    >,
++    pub(super) package_tuple: (
++        ContentTypeValue,
++        AssetsTypeValue,
++        TypefaceTypeValue,
++        TypesetterTyp,
++    ),
++    pub(super) package_array: [PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterTy>;
++        4],
++    pub(super) package_slice: &'onset [PackageSupply<
++        ContentType,
++        AssetsType,
++        TypefaceType,
++        Typeset,
++    >],
++    pub(super) package_function: fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Typeset),
++    pub(super) package_object: Box<
++        dyn Fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue) -> X,
++    >,
++    pub(super) package_short: Vec<u8>,
++}
++struct TupleHolder(
++    pub(super) PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>,
++);
++type PackageAlias = PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, M>;
++const PACKAGE_CONSTANT: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter> = x;
++fn package(
++    package_supply: &'onset PackageSupplyLongName<ContentType, AssetsType, TypefaceType, T>,
++) {
++}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Ty> = value;
++    }
++}
++
++type PackageAlias = PackageSupplyLongName<
++    ContentType,
++    AssetsType,
++    TypefaceType,
++    TypesetterType,
++    More,
++>;
++pub(super) type PackageAlias<'onset> = &'onset (
++    ContentTypeValue,
++    AssetsTypeValue,
++    TypefaceTypeValue,
++    Ty,
++);
++const PACKAGE_CONSTANT: PackageSupplyLongName<
++    ContentType,
++    AssetsType,
++    TypefaceType,
++    Typesetter,
++    More,
++> = x;
++static PACKAGE_STATIC: PackageSupplyLongName<
++    ContentType,
++    AssetsType,
++    TypefaceType,
++    Typesetter,
++    More,
++> = x;
++extern "C" {
++    static PACKAGE_FOREIGN: PackageSupplyLongName<
++        ContentType,
++        AssetsType,
++        TypefaceType,
++        Typesetter,
++        M,
++    >;
++}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<
++            ContentType,
++            AssetsType,
++            TypefaceType,
++            TypesetterType,
++        > = value;
++    }
++}
++
++struct VisibleHolder {
++    pub(in crate::graphics_processing_unit::scenery_list::roster_list) part_anchor: PartAnchor,
++    pub(in crate::graphics_processing_unit::scenery_list::roster_list) pose_record: PoseRecordOfThePart,
++}
++pub(in crate::graphics_processing_unit::scenery_list::roster_list) const MOTION_WORD_COUNT: usize = 32;
++pub(in crate::renderer) const STATE_BYTE_COUNT: usize = ParticleFrame::PARTICLE_STATE_BYTE_COUNT_VALUE;
++
++pub trait Platform: PackagePlatform
++    + ChoicePlatform
++    + GraphicsPlatform
++    + SoundPlatform
++    + TextPlatform
++{
++}
++
++impl<FrameAdvancerType, CauseType> Window for WindowValue<FrameAdvancerType, CauseType>
++where
++    FrameAdvancerType: for<'frame> FrameAdvancer<Self::FrameWindowType<'frame>, Error = CauseType>
++        + 'static,
++    CauseType: error::Error + Send + Sync + 'static,
++{
++}
+diff --git b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/trailing_delimiter.rs b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/trailing_delimiter.rs
+new file mode 100644
+index 0000000..c41a2b9
+--- /dev/null
++++ b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/trailing_delimiter.rs
+@@ -0,0 +1,83 @@
++// rustfmt-assignment_rhs_break: TrailingDelimiter
++// Where to break the right-hand side of an assignment
++
++const LOOKUP_TABLE_OF_NAMES: [&str; 4] = [
++    "first_name_value",
++    "second_name_value",
++    "third_name_value",
++    "x",
++];
++
++fn main() {
++    {
++        {
++            {
++                {
++                    let embodiment = Embodiment::try_from((
++                        content,
++                        character,
++                        session,
++                        current_instant,
++                    ))?;
++                    let embodiment_value = Embodiment::from_parts(
++                        content, character, session, instant_x,
++                    );
++                    let embodiment_value =
++                        receiver.from_parts(content, character, session, instant_xx);
++                    let embodiment_value = Embodiment {
++                        content,
++                        character,
++                        session,
++                        current_instant,
++                    };
++                    let embodiment_value = [
++                        content_value,
++                        character_value,
++                        session_value,
++                        instant_x,
++                    ];
++                    let embodiment_value = vec![
++                        content_value,
++                        character_value,
++                        session_value,
++                        instant,
++                    ];
++                    let embodiment_value = (
++                        content_value,
++                        character_value,
++                        session_value,
++                        instant_xx,
++                    );
++                    embodiment_value = Embodiment::from_parts(
++                        content,
++                        character,
++                        session,
++                        instant_xxxx,
++                    );
++                    embodiment_value += Embodiment::from_parts(
++                        content,
++                        character,
++                        session,
++                        instant_xxx,
++                    );
++                    let embodiment_value = if condition_long {
++                        content_value
++                    } else {
++                        character_valu
++                    };
++                    let embodiment_value =
++                        receiver_value.content().character().session(instant_xxx);
++                    let embodiment_value =
++                        first_function(content) + second_function(character, sess);
++                    let embodiment_value =
++                        Embodiment::from_parts(content, character, session, instant_x).await;
++                    let embodiment_value =
++                        crate::tests::fixture::activity_kinds::activity_kinds_factory_name();
++                    let embodiment_value = fixture::failure_texts_factory(&failure_seam, || {
++                        Store::try_from(&mut context)
++                    });
++                }
++            }
++        }
++    }
++}
+diff --git b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/trailing_delimiter_type.rs b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/trailing_delimiter_type.rs
+new file mode 100644
+index 0000000..dffc4a8
+--- /dev/null
++++ b/src/tools/rustfmt/tests/target/configs/assignment_rhs_break/trailing_delimiter_type.rs
+@@ -0,0 +1,93 @@
++// rustfmt-assignment_rhs_break: TrailingDelimiter
++// Where to break a type behind the `:` of a field or the `=` of a type alias
++
++struct Holder<'onset> {
++    pub(super) package_supply: &'onset PackageSupply<
++        ContentType,
++        AssetsType,
++        TypefaceType,
++        TypesetterType,
++    >,
++    pub(super) package_tuple: (
++        ContentTypeValue,
++        AssetsTypeValue,
++        TypefaceTypeValue,
++        TypesetterTyp,
++    ),
++    pub(super) package_array:
++        [PackageSupply<ContentType, AssetsType, TypefaceType, TypesetterTy>; 4],
++    pub(super) package_slice: &'onset [PackageSupply<
++        ContentType,
++        AssetsType,
++        TypefaceType,
++        Typeset,
++    >],
++    pub(super) package_function: fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue, Typeset),
++    pub(super) package_object: Box<
++        dyn Fn(ContentTypeValue, AssetsTypeValue, TypefaceTypeValue) -> X,
++    >,
++    pub(super) package_short: Vec<u8>,
++}
++struct TupleHolder(
++    pub(super) PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, More>,
++);
++type PackageAlias = PackageSupplyLongName<ContentType, AssetsType, TypefaceType, TypesetterType, M>;
++const PACKAGE_CONSTANT: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Typesetter> =
++    x;
++fn package(
++    package_supply: &'onset PackageSupplyLongName<ContentType, AssetsType, TypefaceType, T>,
++) {
++}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<ContentType, AssetsType, TypefaceType, Ty> =
++            value;
++    }
++}
++
++type PackageAlias = PackageSupplyLongName<
++    ContentType,
++    AssetsType,
++    TypefaceType,
++    TypesetterType,
++    More,
++>;
++pub(super) type PackageAlias<'onset> = &'onset (
++    ContentTypeValue,
++    AssetsTypeValue,
++    TypefaceTypeValue,
++    Ty,
++);
++const PACKAGE_CONSTANT: PackageSupplyLongName<
++    ContentType,
++    AssetsType,
++    TypefaceType,
++    Typesetter,
++    More,
++> = x;
++static PACKAGE_STATIC: PackageSupplyLongName<
++    ContentType,
++    AssetsType,
++    TypefaceType,
++    Typesetter,
++    More,
++> = x;
++extern "C" {
++    static PACKAGE_FOREIGN: PackageSupplyLongName<
++        ContentType,
++        AssetsType,
++        TypefaceType,
++        Typesetter,
++        M,
++    >;
++}
++fn main() {
++    {
++        let package_supply: PackageSupplyLongName<
++            ContentType,
++            AssetsType,
++            TypefaceType,
++            TypesetterType,
++        > = value;
++    }
++}

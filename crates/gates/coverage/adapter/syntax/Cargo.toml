@@ -1,0 +1,18 @@
+[package]
+name = "gates_coverage_adapter_syntax"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+gates_coverage_core_source.workspace = true
+gates_coverage_core_test_boundaries.workspace = true
+proc-macro2.workspace = true
+stack_domain_driven_design_core.workspace = true
+syn.workspace = true

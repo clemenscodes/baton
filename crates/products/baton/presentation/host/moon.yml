@@ -1,0 +1,18 @@
+$schema: '../../../../../.moon/cache/schemas/project.json'
+
+id: 'products_baton_presentation_host'
+language: 'rust'
+stack: 'systems'
+layer: 'application'
+tags: ['crate', 'baton', 'presentation']
+
+dependsOn:
+  - 'stack_domain_driven_design_core'
+  - 'stack_lock_adapter_control_group_unified_hierarchy'
+  - 'stack_lock_adapter_device_program_berkeley_packet_filter'
+  - 'stack_lock_adapter_device_tree_system_file_system'
+  - 'stack_lock_adapter_lock_record_file_system'
+  - 'stack_lock_adapter_pause_standard_library'
+  - 'stack_lock_adapter_task_table_process_file_system'
+  - 'stack_lock_application'
+  - 'stack_process_adapter_spawner_standard_library'

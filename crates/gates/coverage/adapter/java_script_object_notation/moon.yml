@@ -1,0 +1,37 @@
+$schema: '../../../../../.moon/cache/schemas/project.json'
+
+id: 'gates_coverage_adapter_java_script_object_notation'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'tool', 'infrastructure']
+
+dependsOn:
+  - 'gates_coverage_core_region'
+  - 'gates_coverage_core_report'
+  - 'gates_coverage_core_span'
+  - 'gates_coverage_core_test_build'
+  - 'stack_domain_driven_design_core'
+
+tasks:
+  cargo/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_program'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'
+
+  nix/build/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:flake'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'

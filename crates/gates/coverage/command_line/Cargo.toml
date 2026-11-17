@@ -1,0 +1,20 @@
+[package]
+name = "gates_coverage_command_line"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "tool_coverage"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+gates_coverage_adapter_file_system.workspace = true
+gates_coverage_adapter_java_script_object_notation.workspace = true
+gates_coverage_adapter_process.workspace = true
+gates_coverage_adapter_syntax.workspace = true
+gates_coverage_application.workspace = true
+stack_domain_driven_design_core.workspace = true

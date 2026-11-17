@@ -1,0 +1,2 @@
+[[rule]]
+include = ["**/Cargo.toml"]

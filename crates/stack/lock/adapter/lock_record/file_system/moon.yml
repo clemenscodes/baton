@@ -1,0 +1,17 @@
+$schema: '../../../../../../.moon/cache/schemas/project.json'
+
+id: 'stack_lock_adapter_lock_record_file_system'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'lock', 'infrastructure']
+
+dependsOn:
+  - 'stack_domain_driven_design_core'
+  - 'stack_lock_application'
+  - 'stack_lock_core_demand'
+  - 'stack_lock_core_device_address'
+  - 'stack_lock_core_device_file'
+  - 'stack_lock_core_graphics_lock'
+  - 'stack_lock_core_graphics_user'
+  - 'stack_lock_core_name'

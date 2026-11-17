@@ -1,0 +1,23 @@
+$schema: './cache/schemas/workspace.json'
+
+telemetry: false
+
+vcs:
+  defaultBranch: 'main'
+  client: 'git'
+
+projects:
+  - 'moon.yml'
+  - 'crates/**/moon.yml'
+
+pipeline:
+  syncProjects: false
+  syncWorkspace: false
+
+constraints:
+  enforceLayerRelationships: true
+  tagRelationships:
+    domain: ['domain', 'domain_driven_design', 'tool']
+    application: ['application', 'domain', 'domain_driven_design', 'tool']
+    infrastructure: ['infrastructure', 'application', 'domain', 'domain_driven_design', 'tool']
+    presentation: ['presentation', 'application', 'infrastructure', 'domain', 'domain_driven_design', 'tool']

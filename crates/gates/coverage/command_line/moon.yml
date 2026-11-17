@@ -1,0 +1,56 @@
+$schema: '../../../../.moon/cache/schemas/project.json'
+
+id: 'gates_coverage_command_line'
+language: 'rust'
+stack: 'systems'
+layer: 'tool'
+tags: ['crate', 'tool', 'presentation']
+
+dependsOn:
+  - 'gates_coverage_adapter_file_system'
+  - 'gates_coverage_adapter_java_script_object_notation'
+  - 'gates_coverage_adapter_process'
+  - 'gates_coverage_adapter_syntax'
+  - 'gates_coverage_application'
+  - 'stack_domain_driven_design_core'
+
+tasks:
+  program:
+    toolchain: 'system'
+    command: 'cargo build --release --locked --package gates_coverage_command_line'
+    env:
+      CARGO_TARGET_DIR: '$workspaceRoot/target/moon/tool'
+    options:
+      envOverride: true
+    deps:
+      - target: '~:sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    inputs: []
+    outputs:
+      - '/target/moon/tool/release/tool_coverage'
+
+  cargo/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_program'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'
+
+  nix/build/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:flake'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'

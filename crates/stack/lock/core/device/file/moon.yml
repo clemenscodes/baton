@@ -1,0 +1,10 @@
+$schema: '../../../../../../.moon/cache/schemas/project.json'
+
+id: 'stack_lock_core_device_file'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'lock', 'domain']
+
+dependsOn:
+  - 'stack_domain_driven_design_core'

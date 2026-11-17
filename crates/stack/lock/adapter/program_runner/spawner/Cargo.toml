@@ -1,0 +1,19 @@
+[package]
+name = "stack_lock_adapter_program_runner_spawner"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+stack_domain_driven_design_core.workspace = true
+stack_lock_application.workspace = true
+stack_process_core_invocation.workspace = true
+
+[dev-dependencies]
+stack_process_adapter_spawner_transcript.workspace = true

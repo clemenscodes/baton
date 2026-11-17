@@ -1,0 +1,14 @@
+$schema: '../../../../../../.moon/cache/schemas/project.json'
+
+id: 'stack_lock_adapter_program_runner_spawner'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'lock', 'infrastructure']
+
+dependsOn:
+  - 'stack_domain_driven_design_core'
+  - 'stack_lock_application'
+  - 'stack_process_core_invocation'
+  - id: 'stack_process_adapter_spawner_transcript'
+    scope: 'development'

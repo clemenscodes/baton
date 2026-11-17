@@ -1,0 +1,3 @@
+{
+  name = "gates_coverage_adapter_java_script_object_notation";
+}

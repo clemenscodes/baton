@@ -1,0 +1,10 @@
+$schema: '../../../../../.moon/cache/schemas/project.json'
+
+id: 'stack_process_core_invocation'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'process', 'domain']
+
+dependsOn:
+  - 'stack_domain_driven_design_core'

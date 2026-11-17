@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "jnoortheen.nix-ide",
+    "mkhl.direnv",
+    "moonrepo.moon-console",
+    "redhat.vscode-yaml",
+    "rust-lang.rust-analyzer"
+  ]
+}

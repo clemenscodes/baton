@@ -1,0 +1,39 @@
+$schema: '../../../../../../.moon/cache/schemas/project.json'
+
+id: 'gates_vocabulary_language_application'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'tool', 'application']
+
+dependsOn:
+  - 'gates_vocabulary_language_core_books'
+  - 'gates_vocabulary_language_core_dependencies'
+  - 'gates_vocabulary_language_core_language'
+  - 'gates_vocabulary_language_core_languages'
+  - 'stack_domain_driven_design_core'
+  - id: 'gates_vocabulary_language_core_foreign_name'
+    scope: 'development'
+
+tasks:
+  cargo/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_program'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'
+
+  nix/build/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:flake'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'

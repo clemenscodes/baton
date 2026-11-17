@@ -1,0 +1,54 @@
+$schema: '../../../../../.moon/cache/schemas/project.json'
+
+id: 'gates_coverage_adapter_process'
+language: 'rust'
+stack: 'systems'
+layer: 'library'
+tags: ['crate', 'tool', 'infrastructure']
+
+dependsOn:
+  - 'gates_coverage_core_invocation'
+  - 'stack_domain_driven_design_core'
+
+tasks:
+  cargo/build/crate:
+    env: &test_environment
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER: '${NATIVE_TEST_RUNNER}'
+
+  cargo/crate:
+    command: 'cargo test --release --locked --tests --package $project'
+    env:
+      <<: *test_environment
+      HOME: '$workspaceRoot/target/moon/home'
+    options:
+      mergeArgs: 'replace'
+
+  cargo/coverage/report:
+    command: '$workspaceRoot/target/moon/tool/release/tool_coverage measure $workspaceRoot/target/moon/coverage/$project.json cargo build --tests --locked --message-format json-render-diagnostics --package $project -- cargo test --locked --tests --package $project'
+    env:
+      <<: *test_environment
+      HOME: '$workspaceRoot/target/moon/home'
+    options:
+      mergeArgs: 'replace'
+
+  cargo/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_program'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'
+
+  nix/build/vocabulary:
+    deps:
+      - target: 'workspace:vocabulary_sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:flake'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    options:
+      mergeDeps: 'replace'

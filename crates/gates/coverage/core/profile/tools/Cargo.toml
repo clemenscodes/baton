@@ -1,0 +1,16 @@
+[package]
+name = "gates_coverage_core_profile_tools"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+gates_coverage_core_invocation.workspace = true
+gates_coverage_core_test_build.workspace = true
+stack_domain_driven_design_core.workspace = true

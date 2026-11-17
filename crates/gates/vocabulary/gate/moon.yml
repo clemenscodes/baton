@@ -1,0 +1,34 @@
+$schema: '../../../../.moon/cache/schemas/project.json'
+
+id: 'gates_vocabulary_gate'
+language: 'rust'
+stack: 'systems'
+layer: 'tool'
+tags: ['crate', 'tool']
+
+dependsOn:
+  - 'gates_vocabulary_language_application'
+  - 'gates_vocabulary_language_adapter_command_line'
+  - 'gates_vocabulary_language_core_foreign_name'
+  - 'gates_vocabulary_language_core_language'
+  - 'gates_vocabulary_language_core_languages'
+  - 'stack_domain_driven_design_core'
+
+tasks:
+  program:
+    toolchain: 'system'
+    command: 'cargo build --release --locked --package gates_vocabulary_gate'
+    env:
+      CARGO_TARGET_DIR: '$workspaceRoot/target/moon/tool'
+    options:
+      envOverride: true
+    deps:
+      - target: '~:sources'
+        cacheStrategy: 'hash'
+      - target: 'workspace:toolchain'
+        cacheStrategy: 'hash'
+      - target: 'workspace:cargo_setting'
+        cacheStrategy: 'hash'
+    inputs: []
+    outputs:
+      - '/target/moon/tool/release/tool_vocabulary'

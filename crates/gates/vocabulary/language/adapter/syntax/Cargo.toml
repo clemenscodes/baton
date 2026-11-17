@@ -1,0 +1,17 @@
+[package]
+name = "gates_vocabulary_language_adapter_syntax"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+gates_vocabulary_language_core_language.workspace = true
+proc-macro2.workspace = true
+stack_domain_driven_design_core.workspace = true
+syn.workspace = true

@@ -1,0 +1,24 @@
+[package]
+name = "products_baton_presentation_command_line_interface"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "baton"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+clap.workspace = true
+stack_domain_driven_design_core.workspace = true
+stack_lock_adapter_host_helper_elevation_program.workspace = true
+stack_lock_adapter_program_runner_spawner.workspace = true
+stack_lock_application.workspace = true
+stack_process_adapter_spawner_standard_library.workspace = true
+
+[dev-dependencies]
+stack_process_adapter_spawner_transcript.workspace = true
+stack_process_core_invocation.workspace = true

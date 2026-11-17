@@ -1,0 +1,20 @@
+[package]
+name = "gates_coverage_adapter_java_script_object_notation"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+gates_coverage_core_region.workspace = true
+gates_coverage_core_report.workspace = true
+gates_coverage_core_span.workspace = true
+gates_coverage_core_test_build.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+stack_domain_driven_design_core.workspace = true

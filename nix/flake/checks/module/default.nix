@@ -34,6 +34,7 @@ runCommand "module"
     inherit sudoRules;
     activationText = config.system.activationScripts.baton.text;
     batonProgram = config.baton.program;
+    hostProgram = config.baton.hostProgram;
     passAsFile = [
       "udevRules"
       "sudoRules"
@@ -56,6 +57,7 @@ runCommand "module"
     grep --quiet 'baton-admission-rtx3080' "$activationTextPath" || fail "the activation does not admit the applications."
     grep --quiet 'BATON_HOST_PROGRAM' "$batonProgram" || fail "baton is not wrapped with the path of baton_host."
     host=$(grep --only-matching 'RUN+="[^"]*baton_host refresh"' "$udevRulesPath" | cut --delimiter '"' --fields 2 | cut --delimiter ' ' --fields 1)
+    grep --quiet -- "$hostProgram acquire" "$sudoRulesPath" || fail "baton.hostProgram is not the program sudo allows."
     grep --quiet 'fbset' "$host" || fail "baton_host is not wrapped with the path of con2fbmap."
     echo "[MODULE] the module encloses every lock at the bind of its driver, refreshes its slot and allows only acquire, release and status."
     touch "$out"

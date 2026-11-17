@@ -14,6 +14,8 @@ owner.
   `nvidia-smi`, since sudo from a service or a rule of udev hands it no `PATH` that holds them.
 - The members of `baton.group` run `baton_host acquire`, `release` and `status` through sudo without a
   password, and nothing else of the helper.
+- `baton.hostProgram` is the path of the wrapped `baton_host`, the one path sudo allows, for a
+  program of another project that acquires a lock for its own process, such as a hypervisor.
 - `baton.program` is the path of `baton`, wrapped with the paths of sudo and of `baton_host`. A module
   of another project runs its program inside a lock with
   `${config.baton.program} run --lock <lock> --application <application> -- <program>` and adds its

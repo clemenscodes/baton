@@ -125,6 +125,12 @@ in
       default = { };
       description = "The locks of the host, each named for its GPU, such as rtx3080.";
     };
+    hostProgram = mkOption {
+      type = types.str;
+      readOnly = true;
+      default = hostProgram;
+      description = "The path of baton_host, wrapped, which sudo allows the group to run, for a program of another project that acquires a lock for itself.";
+    };
     program = mkOption {
       type = types.str;
       readOnly = true;

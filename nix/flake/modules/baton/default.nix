@@ -21,7 +21,11 @@ let
     ;
   setting = config.baton;
   flakePackages = self.packages.${pkgs.stdenv.hostPlatform.system};
-  hostProgram = "${setting.hostPackage}/bin/baton_host";
+  hostWrapper = pkgs.writeShellScriptBin "baton_host" ''
+    export PATH=${lib.makeBinPath [ pkgs.fbset ]}:/run/current-system/sw/bin
+    exec ${setting.hostPackage}/bin/baton_host "$@"
+  '';
+  hostProgram = "${hostWrapper}/bin/baton_host";
   elevationProgram = "/run/wrappers/bin/sudo";
   program =
     pkgs.runCommand "baton"

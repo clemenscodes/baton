@@ -55,6 +55,8 @@ runCommand "module"
     grep --quiet 'baton_host status$' "$sudoRulesPath" || fail "the sudo rules do not allow the status."
     grep --quiet 'baton-admission-rtx3080' "$activationTextPath" || fail "the activation does not admit the applications."
     grep --quiet 'BATON_HOST_PROGRAM' "$batonProgram" || fail "baton is not wrapped with the path of baton_host."
+    host=$(grep --only-matching 'RUN+="[^"]*baton_host refresh"' "$udevRulesPath" | cut --delimiter '"' --fields 2 | cut --delimiter ' ' --fields 1)
+    grep --quiet 'fbset' "$host" || fail "baton_host is not wrapped with the path of con2fbmap."
     echo "[MODULE] the module encloses every lock at the bind of its driver, refreshes its slot and allows only acquire, release and status."
     touch "$out"
   ''

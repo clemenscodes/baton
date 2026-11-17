@@ -18,6 +18,8 @@ impl ValueObject for LockName {}
 impl Identifier for LockName {}
 
 impl LockName {
+    pub const HOST_TEXT: &'static str = "host";
+
     pub fn text(&self) -> &str {
         &self.text
     }
@@ -33,7 +35,8 @@ impl TryFrom<String> for LockName {
     fn try_from(text: String) -> Result<Self, Self::Error> {
         let character_presence = text.chars().all(Self::check_character);
         let option_absence = !text.starts_with('-');
-        match !text.is_empty() && character_presence && option_absence {
+        let host_absence = text != Self::HOST_TEXT;
+        match !text.is_empty() && character_presence && option_absence && host_absence {
             true => Ok(Self { text }),
             false => Err(Error::LockName { text }),
         }
@@ -60,7 +63,7 @@ mod tests {
 
     #[test]
     fn an_empty_name_an_option_and_a_path_are_no_name_of_a_lock() {
-        let text = ["", "--help", "../rtx3080", "rtx3080 2"];
+        let text = ["", "--help", "../rtx3080", "rtx3080 2", "host"];
 
         let outcomes = text.map(|text| LockName::try_from(String::from(text)));
 

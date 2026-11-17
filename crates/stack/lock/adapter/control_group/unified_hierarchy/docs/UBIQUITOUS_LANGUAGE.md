@@ -21,3 +21,4 @@
 | Processes Path | The file cgroup.procs of a cgroup, which a process is moved into by writing its identifier. |
 | Relative Text | The path of a cgroup without its leading slash. |
 | Stack Lock Adapter Control Group Unified Hierarchy | The crate stack_lock_adapter_control_group_unified_hierarchy, the adapter of the port ControlGroup of stack_lock_application over the files of the unified cgroup hierarchy. |
+| Try Enter Group | To write the own process into the processes of a cgroup. |

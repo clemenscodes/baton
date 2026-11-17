@@ -119,6 +119,10 @@ impl GraphicsLock {
         format!("/{}/{}/{application_name}", Self::TREE_NAME, self.lock_name)
     }
 
+    pub fn host_path_text() -> String {
+        format!("/{}/{}", Self::TREE_NAME, LockName::HOST_TEXT)
+    }
+
     pub fn tree_path_text(&self) -> String {
         format!("/{}/{}", Self::TREE_NAME, self.lock_name)
     }
@@ -342,6 +346,7 @@ mod tests {
         assert_eq!(graphics_lock.maybe_first_demand(), None);
         assert!(!graphics_lock.passthrough_presence());
         assert_eq!(graphics_lock.tree_path_text(), "/baton/rtx3080");
+        assert_eq!(GraphicsLock::host_path_text(), "/baton/host");
     }
 
     #[test]

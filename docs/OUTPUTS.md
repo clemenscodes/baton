@@ -66,6 +66,7 @@ so does a row that names an output that is gone. The flake builds for the one sy
 | `crate-name` | check | the name of a crate and of its project against its path |
 | `deadnix` | check | the bindings of Nix nothing reads |
 | `default` | shell | the one shell with the toolchain, the patched rustfmt, moon, nextest, cargo-llvm-cov, the Nix formatter, statix and deadnix |
+| `default` | module | the NixOS module of baton, which encloses the locks of a host at the bind of their drivers and lets a group acquire them |
 | `dependencies` | check | the `dependsOn` of a `moon.yml` against its `Cargo.toml` |
 | `format` | check | the format of Nix and of the shaders |
 | `formatter` | formatter | the Nix tree formatter, run by the `format` gate and by `nix fmt` |
@@ -100,6 +101,7 @@ so does a row that names an output that is gone. The flake builds for the one sy
 | `gates_vocabulary_language_core_languages` | check | the crate `gates_vocabulary_language_core_languages`, built and tested |
 | `interface` | check | the imports and the publications of a layer |
 | `layer` | check | the layer of a type and the direction of a dependency |
+| `module` | check | a NixOS system with the module and one lock, whose rules of udev, sudo and activation it checks |
 | `outputs` | check | this page against the flake |
 | `participle` | check | the terms whose head is a participle |
 | `pipeline` | check | the checks of the flake against the tasks of moon |

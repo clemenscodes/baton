@@ -264,6 +264,7 @@ let
         "nix/flake/checks/default.nix"
       ];
     };
+    module = callPackage ./module { inherit self; };
     outputs = callPackage ./outputs {
       names = concatStringsSep "\n" (map (name: "${name} check") (attrNames gates) ++ outputNames) + "\n";
       source = sourceTree "outputs" [ "docs/OUTPUTS.md" ];

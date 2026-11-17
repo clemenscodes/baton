@@ -23,6 +23,8 @@
 | Eligible Name | The name of an eligible application of a lock. |
 | Graphics Demands | The queue of the demands of a lock, in the order they were made. |
 | Graphics Lock | The lock of a GPU, the mutex the kernel enforces, with its name, its index in the maps of the device program, its devices, its device files, its eligible applications, its default owner, its owner, its queue of demands, the consoles it unbound and its passthrough. |
+| Host Path Text | The path of the cgroup of the helper below the tree of baton, /baton/host. |
+| Host Text | The text host of a lock name, the name of the cgroup of the helper. |
 | Lock Text | The name of a lock as a text in an error. |
 | Map Index | The number of a lock in the maps of the device program, which tells the locks of one host apart. |
 | Maybe Default Owner | The eligible application that holds a lock whenever no other owns it, such as the desktop of a system with a single GPU, where there is one. |

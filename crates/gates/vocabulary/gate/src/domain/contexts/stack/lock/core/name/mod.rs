@@ -56,6 +56,16 @@ impl StackLockCoreNameContext {
             let definition = "Whether a text does not begin with -, so no program reads it as an option.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Host", "Text"];
+            let definition = "The text host, the name of the cgroup of the helper, which no lock takes.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Host", "Absence"];
+            let definition = "Whether a text is other than the name of the cgroup of the helper.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

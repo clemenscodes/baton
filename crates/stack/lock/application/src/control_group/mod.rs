@@ -13,5 +13,7 @@ pub trait ControlGroup: DrivenPort {
     fn try_move_process(&self, path_text: &str, process_identifier: u32)
     -> Result<(), Self::Error>;
 
+    fn try_enter_group(&self, path_text: &str) -> Result<(), Self::Error>;
+
     fn try_remove_group(&self, path_text: &str) -> Result<(), Self::Error>;
 }

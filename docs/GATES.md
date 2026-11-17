@@ -40,6 +40,7 @@ states how the checks are made.
 | `dependencies` | a moon `dependsOn` that differs from the path dependencies in `Cargo.toml` | green |
 | `crate-name` | a package name or a moon id that differs from the path of the crate | green |
 | `pipeline` | a flake check with no moon task, or a task that names a check that does not exist | green |
+| `module` | a module of NixOS whose rules of udev, sudo and activation do not hold a lock | green |
 | `outputs` | a difference between the flake outputs and `docs/OUTPUTS.md` | green |
 
 ## The commit gate

@@ -275,6 +275,15 @@ tasks:
       - '/nix/**/*.nix'
       - '/crates/**/*'
 
+  nix/build/module:
+    toolchain: 'system'
+    command: 'nix build --no-link --print-build-logs .#checks.x86_64-linux.module'
+    inputs:
+      - '/flake.nix'
+      - '/flake.lock'
+      - '/nix/**/*.nix'
+      - '/crates/**/*'
+
   nix/build/outputs:
     toolchain: 'system'
     command: 'nix build --no-link --print-build-logs .#checks.x86_64-linux.outputs'
@@ -343,6 +352,7 @@ tasks:
       - 'nix/build/dependencies'
       - 'nix/build/crate-name'
       - 'nix/build/pipeline'
+      - 'nix/build/module'
       - 'nix/build/outputs'
       - 'nix/build/book'
       - 'nix/build/shell'

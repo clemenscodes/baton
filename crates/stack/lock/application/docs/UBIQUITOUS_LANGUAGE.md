@@ -43,6 +43,8 @@
 | Guard Ports | The ports the lock guard drives, the host helper and the program runner. |
 | Guard Run | The command of the program without a privilege that acquires a lock for a program, runs it and releases the lock when it ends. |
 | Host Helper | The driven port of the program without a privilege that runs baton_host through the elevation program. |
+| Host Identifier | The identifier of the cgroup of the helper, which every lock permits. |
+| Host Path Text | The path of the cgroup of the helper, which every lock permits. |
 | Item Type | The type of the items a list of texts is made from. |
 | Items | The values a list of texts is made from. |
 | Lock | The lock of a GPU, the module of its ports, its services and its setting. |
@@ -78,6 +80,7 @@
 | Run Outcome | The outcome of the program of a guard run. |
 | Setting | The lock setting. |
 | Stack Lock Application | The crate stack_lock_application, the application of the mutex around a GPU, its commands, its queries, its two services and the ports of the kernel, the host and the programs it drives. |
+| Stale Files | The device files of a lock that a scan no longer finds, deleted from the map after the new ones are inserted. |
 | Status Query | The query of the state of every lock of the host. |
 | Status Texts | The lines of the state of the locks. |
 | Step | The acquisition step. |
@@ -93,6 +96,9 @@
 | Try Delete Device Files | To delete device files from the map of the devices. |
 | Try Delete Lock | To delete the record of a lock. |
 | Try End Process Users | To end the processes that use a GPU, first with the request to end and after the end deadline with the kill. |
+| Try Enter Group | To move the own process of the helper into a cgroup. |
+| Try Enter Host | To move the helper into its own cgroup, so the programs it runs reach the GPU of a lock. |
+| Try Extend Device Files | To add the device files a scan finds to a lock and to its map without deleting any, around a passthrough. |
 | Try Force End | To kill a process. |
 | Try Insert Device Files | To insert device files into the map of the devices for a lock. |
 | Try Install Program | To install the device program at the root of the unified hierarchy where it is absent. |
@@ -102,6 +108,7 @@
 | Try Move Process | To move a process into a cgroup. |
 | Try Permit Application | To permit the cgroup of an application in the map of the permissions. |
 | Try Permit Group | To permit a cgroup for a lock in the map of the permissions. |
+| Try Permit Host | To create the cgroup of the helper and permit it for a lock. |
 | Try Read Console Users | To find the consoles and the framebuffers of the firmware drawn on a GPU. |
 | Try Read Device Files | To find the device files of a GPU. |
 | Try Read Group Identifier | To read the identifier of a cgroup. |
@@ -114,6 +121,8 @@
 | Try Restore Lock | To give the GPU of a lock back after its owner, its passthrough, its consoles and its permission. |
 | Try Revoke Application | To take the permission of an application out of the map of the permissions. |
 | Try Revoke Group | To take the permission of a cgroup for a lock out of the map of the permissions. |
+| Try Revoke Host | To revoke the permission of the cgroup of the helper for a lock. |
+| Try Scan Device Files | To read the device files of every device of a lock. |
 | Try Scan Process Users | To find every process that holds one of the device files. |
 | Try Scan Users | To find every user of the GPU of a lock, leaving out the processes of an application where one is named. |
 | Try Settle Lock | To drop the demands whose process ended and give back the GPU of an owner whose cgroup is empty. |

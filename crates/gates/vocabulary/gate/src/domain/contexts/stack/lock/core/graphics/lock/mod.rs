@@ -266,6 +266,16 @@ impl StackLockCoreGraphicsLockContext {
             let definition = "To set the owner of a lock from its record, refusing an application that is not eligible.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Host", "Text"];
+            let definition = "The text host of a lock name, the name of the cgroup of the helper.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Host", "Path", "Text"];
+            let definition = "The path of the cgroup of the helper below the tree of baton, /baton/host.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

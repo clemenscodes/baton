@@ -81,6 +81,7 @@ impl<PortsType: LockPorts> SynchronousCommandHandler<Enclosure> for LockAdminist
         let mut graphics_lock = maybe_graphics_lock
             .unwrap_or_else(|| GraphicsLock::from((lock_name, map_index)));
         graphics_lock.try_add_device(enclosure.device_address())?;
+        self.try_permit_host(&graphics_lock)?;
         self.try_update_device_files(&mut graphics_lock)?;
         self.try_store_lock(&graphics_lock)?;
         Ok(Self::compose_texts(graphics_lock.device_files()))
@@ -225,6 +226,7 @@ impl<PortsType: LockPorts> SynchronousCommandHandler<Removal> for LockAdministra
         if let Some(default_owner) = graphics_lock.maybe_default_owner() {
             self.try_revoke_application(&graphics_lock, default_owner)?;
         }
+        self.try_revoke_host(&graphics_lock)?;
         let device_program = self.lock_ports.device_program();
         device_program
             .try_delete_device_files(graphics_lock.device_files())
@@ -353,6 +355,7 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
             .try_move_process(&path_text, graphics_demand.waiter_identifier())
             .map_err(Self::compose_group_error)?;
         if acquisition_mode.passthrough_presence() && !graphics_lock.passthrough_presence() {
+            self.try_enter_host()?;
             let mut persistence_presence = false;
             for device_address in graphics_lock.device_addresses() {
                 let device_persistence = device_tree
@@ -361,7 +364,7 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
                 persistence_presence = persistence_presence || device_persistence;
             }
             graphics_lock.record_passthrough(persistence_presence);
-            self.try_update_device_files(&mut graphics_lock)?;
+            self.try_extend_device_files(&mut graphics_lock)?;
         }
         self.try_store_lock(&graphics_lock)?;
         Ok(AcquisitionStep::Ownership)
@@ -447,13 +450,14 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
     ) -> Result<(), Error> {
         let device_tree = self.lock_ports.device_tree();
         if graphics_lock.passthrough_presence() {
+            self.try_enter_host()?;
             let persistence_presence = graphics_lock.clear_passthrough();
             for device_address in graphics_lock.device_addresses() {
                 device_tree
                     .try_release_passthrough(device_address, persistence_presence)
                     .map_err(Self::compose_tree_error)?;
             }
-            self.try_update_device_files(graphics_lock)?;
+            self.try_extend_device_files(graphics_lock)?;
         }
         for console_user in graphics_lock.remove_console_users() {
             device_tree
@@ -492,6 +496,41 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
     }
 
     fn try_update_device_files(&self, graphics_lock: &mut GraphicsLock) -> Result<(), Error> {
+        let device_files = self.try_scan_device_files(graphics_lock)?;
+        let device_program = self.lock_ports.device_program();
+        device_program
+            .try_insert_device_files(graphics_lock.map_index(), &device_files)
+            .map_err(Self::compose_program_error)?;
+        let previous_files = graphics_lock.replace_device_files(device_files);
+        let stale_files = Vec::from_iter(
+            previous_files
+                .into_iter()
+                .filter(|device_file| !graphics_lock.device_files().contains(device_file)),
+        );
+        device_program
+            .try_delete_device_files(&stale_files)
+            .map_err(Self::compose_program_error)
+    }
+
+    fn try_extend_device_files(&self, graphics_lock: &mut GraphicsLock) -> Result<(), Error> {
+        let mut device_files = Vec::from(graphics_lock.device_files());
+        for device_file in self.try_scan_device_files(graphics_lock)? {
+            if !device_files.contains(&device_file) {
+                device_files.push(device_file);
+            }
+        }
+        self.lock_ports
+            .device_program()
+            .try_insert_device_files(graphics_lock.map_index(), &device_files)
+            .map_err(Self::compose_program_error)?;
+        graphics_lock.replace_device_files(device_files);
+        Ok(())
+    }
+
+    fn try_scan_device_files(
+        &self,
+        graphics_lock: &GraphicsLock,
+    ) -> Result<Vec<DeviceFile>, Error> {
         let device_tree = self.lock_ports.device_tree();
         let mut device_files: Vec<DeviceFile> = Vec::new();
         for device_address in graphics_lock.device_addresses() {
@@ -500,14 +539,7 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
                 .map_err(Self::compose_tree_error)?;
             device_files.extend(address_files);
         }
-        let previous_files = graphics_lock.replace_device_files(device_files);
-        let device_program = self.lock_ports.device_program();
-        device_program
-            .try_delete_device_files(&previous_files)
-            .map_err(Self::compose_program_error)?;
-        device_program
-            .try_insert_device_files(graphics_lock.map_index(), graphics_lock.device_files())
-            .map_err(Self::compose_program_error)
+        Ok(device_files)
     }
 
     fn try_permit_application(
@@ -532,6 +564,37 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
             .device_program()
             .try_revoke_group(graphics_lock.map_index(), group_identifier)
             .map_err(Self::compose_program_error)
+    }
+
+    fn try_permit_host(&self, graphics_lock: &GraphicsLock) -> Result<(), Error> {
+        let host_identifier = self
+            .lock_ports
+            .control_group()
+            .try_create_group(&GraphicsLock::host_path_text())
+            .map_err(Self::compose_group_error)?;
+        self.lock_ports
+            .device_program()
+            .try_permit_group(graphics_lock.map_index(), host_identifier)
+            .map_err(Self::compose_program_error)
+    }
+
+    fn try_revoke_host(&self, graphics_lock: &GraphicsLock) -> Result<(), Error> {
+        let host_identifier = self
+            .lock_ports
+            .control_group()
+            .try_create_group(&GraphicsLock::host_path_text())
+            .map_err(Self::compose_group_error)?;
+        self.lock_ports
+            .device_program()
+            .try_revoke_group(graphics_lock.map_index(), host_identifier)
+            .map_err(Self::compose_program_error)
+    }
+
+    fn try_enter_host(&self) -> Result<(), Error> {
+        self.lock_ports
+            .control_group()
+            .try_enter_group(&GraphicsLock::host_path_text())
+            .map_err(Self::compose_group_error)
     }
 
     fn try_read_group_identifier(
@@ -944,6 +1007,16 @@ mod tests {
                 Ok(())
             }
 
+            fn try_enter_group(&self, path_text: &str) -> Result<(), FixtureError> {
+                self.outcome_factory("group")?;
+                self.store
+                    .lock()
+                    .unwrap()
+                    .moves
+                    .push((String::from(path_text), 0));
+                Ok(())
+            }
+
             fn try_remove_group(&self, path_text: &str) -> Result<(), FixtureError> {
                 self.outcome_factory("group")?;
                 self.store.lock().unwrap().control_group.remove(path_text);
@@ -1223,6 +1296,17 @@ mod tests {
                 .unwrap()
         }
 
+        pub(crate) fn host_identifier_factory(fixture_lock_ports: &FixtureLockPorts) -> u64 {
+            fixture_lock_ports
+                .store
+                .lock()
+                .unwrap()
+                .control_group
+                .get("/baton/host")
+                .unwrap()
+                .0
+        }
+
         pub(crate) fn group_identifier_factory(
             fixture_lock_ports: &FixtureLockPorts,
             application_text: &str,
@@ -1284,9 +1368,13 @@ mod tests {
         lock_administration.dispatch_command(admission).unwrap();
 
         let group_identifier = fixture::group_identifier_factory(&fixture_lock_ports, "desktop");
+        let host_identifier = fixture::host_identifier_factory(&fixture_lock_ports);
         let store = fixture_lock_ports.store.lock().unwrap();
-        assert_eq!(store.permissions, BTreeSet::from([(0, group_identifier)]));
-        assert_eq!(store.control_group.len(), 3);
+        assert_eq!(
+            store.permissions,
+            BTreeSet::from([(0, host_identifier), (0, group_identifier)])
+        );
+        assert_eq!(store.control_group.len(), 4);
     }
 
     #[test]
@@ -1305,8 +1393,9 @@ mod tests {
 
         lock_administration.dispatch_command(dismissal).unwrap();
 
+        let host_identifier = fixture::host_identifier_factory(&fixture_lock_ports);
         let store = fixture_lock_ports.store.lock().unwrap();
-        assert!(store.permissions.is_empty());
+        assert_eq!(store.permissions, BTreeSet::from([(0, host_identifier)]));
         assert!(!store.control_group.contains_key("/baton/rtx3080/desktop"));
         drop(store);
         let graphics_lock = fixture::graphics_lock_factory(&fixture_lock_ports);
@@ -1343,16 +1432,21 @@ mod tests {
         );
         assert!(graphics_lock.graphics_demands().is_empty());
         assert_eq!(graphics_lock.console_users(), &[console_user.clone()]);
+        let host_identifier = fixture::host_identifier_factory(&fixture_lock_ports);
         let store = fixture_lock_ports.store.lock().unwrap();
-        assert_eq!(store.permissions, BTreeSet::from([(0, group_identifier)]));
+        assert_eq!(
+            store.permissions,
+            BTreeSet::from([(0, host_identifier), (0, group_identifier)])
+        );
         assert_eq!(store.moves, [(String::from("/baton/rtx3080/resolve"), 7)]);
         assert_eq!(store.record_console_users, [console_user.clone()]);
         drop(store);
         lock_administration
             .dispatch_command(fixture::release_factory("resolve"))
             .unwrap();
+        let host_identifier = fixture::host_identifier_factory(&fixture_lock_ports);
         let store = fixture_lock_ports.store.lock().unwrap();
-        assert!(store.permissions.is_empty());
+        assert_eq!(store.permissions, BTreeSet::from([(0, host_identifier)]));
         assert_eq!(store.console_users, [console_user]);
         drop(store);
         let graphics_lock = fixture::graphics_lock_factory(&fixture_lock_ports);
@@ -1380,9 +1474,10 @@ mod tests {
             ))
             .unwrap();
         let group_identifier = fixture::group_identifier_factory(&fixture_lock_ports, "winix");
+        let host_identifier = fixture::host_identifier_factory(&fixture_lock_ports);
         assert_eq!(
             fixture_lock_ports.store.lock().unwrap().permissions,
-            BTreeSet::from([(0, group_identifier)])
+            BTreeSet::from([(0, host_identifier), (0, group_identifier)])
         );
 
         lock_administration
@@ -1390,9 +1485,10 @@ mod tests {
             .unwrap();
 
         let group_identifier = fixture::group_identifier_factory(&fixture_lock_ports, "desktop");
+        let host_identifier = fixture::host_identifier_factory(&fixture_lock_ports);
         assert_eq!(
             fixture_lock_ports.store.lock().unwrap().permissions,
-            BTreeSet::from([(0, group_identifier)])
+            BTreeSet::from([(0, host_identifier), (0, group_identifier)])
         );
     }
 
@@ -1466,9 +1562,13 @@ mod tests {
             Some("winix")
         );
         let group_identifier = fixture::group_identifier_factory(&fixture_lock_ports, "winix");
+        let host_identifier = fixture::host_identifier_factory(&fixture_lock_ports);
         let store = fixture_lock_ports.store.lock().unwrap();
         assert_eq!(store.pause_count, 2);
-        assert_eq!(store.permissions, BTreeSet::from([(0, group_identifier)]));
+        assert_eq!(
+            store.permissions,
+            BTreeSet::from([(0, host_identifier), (0, group_identifier)])
+        );
         assert!(store.displacement.is_empty());
     }
 
@@ -1572,10 +1672,14 @@ mod tests {
             Some("winix")
         );
         let group_identifier = fixture::group_identifier_factory(&fixture_lock_ports, "winix");
+        let host_identifier = fixture::host_identifier_factory(&fixture_lock_ports);
         let store = fixture_lock_ports.store.lock().unwrap();
         assert_eq!(store.displacement, [7, 43]);
         assert!(!store.task_table.contains(&43));
-        assert_eq!(store.permissions, BTreeSet::from([(0, group_identifier)]));
+        assert_eq!(
+            store.permissions,
+            BTreeSet::from([(0, host_identifier), (0, group_identifier)])
+        );
     }
 
     #[test]
@@ -1620,7 +1724,12 @@ mod tests {
         assert!(graphics_lock.passthrough_presence());
         assert!(graphics_lock.persistence_presence());
         let device_file = DeviceFile::from((DeviceKind::CharacterDevice, 511, 16));
-        assert_eq!(graphics_lock.device_files(), &[device_file]);
+        let device_files = [
+            fixture::device_file_factory(1),
+            fixture::device_file_factory(2),
+            device_file,
+        ];
+        assert_eq!(graphics_lock.device_files(), &device_files);
         assert_eq!(
             fixture_lock_ports
                 .store
@@ -1630,13 +1739,16 @@ mod tests {
                 .keys()
                 .copied()
                 .collect::<Vec<_>>(),
-            [device_file]
+            device_files
         );
         lock_administration
             .dispatch_command(fixture::release_factory("winix"))
             .unwrap();
         let graphics_lock = fixture::graphics_lock_factory(&fixture_lock_ports);
         assert!(!graphics_lock.passthrough_presence());
+        assert_eq!(graphics_lock.device_files(), &device_files);
+        lock_administration.dispatch_command(Refresh).unwrap();
+        let graphics_lock = fixture::graphics_lock_factory(&fixture_lock_ports);
         assert_eq!(
             graphics_lock.device_files(),
             &[
@@ -1644,9 +1756,35 @@ mod tests {
                 fixture::device_file_factory(2)
             ]
         );
+        assert_eq!(
+            fixture_lock_ports
+                .store
+                .lock()
+                .unwrap()
+                .device_files
+                .keys()
+                .copied()
+                .collect::<Vec<_>>(),
+            [
+                fixture::device_file_factory(1),
+                fixture::device_file_factory(2)
+            ]
+        );
         let store = fixture_lock_ports.store.lock().unwrap();
         assert!(store.device_addresses.is_empty());
         assert_eq!(store.persistence_presence, [true]);
+        assert_eq!(
+            Vec::from_iter(
+                store
+                    .moves
+                    .iter()
+                    .filter(|(path_text, _)| path_text == "/baton/host")
+            ),
+            [
+                &(String::from("/baton/host"), 0),
+                &(String::from("/baton/host"), 0)
+            ]
+        );
     }
 
     #[test]
@@ -1687,7 +1825,10 @@ mod tests {
         assert!(store.device_addresses.is_empty());
         assert!(store.record.is_empty());
         assert!(store.device_files.is_empty());
-        assert!(store.control_group.is_empty());
+        assert_eq!(
+            Vec::from_iter(store.control_group.keys()),
+            [&String::from("/baton/host")]
+        );
         assert!(!store.program_presence);
     }
 
@@ -1729,9 +1870,10 @@ mod tests {
         lock_administration
             .dispatch_command(Removal::try_from(String::from("rtx3080")).unwrap())
             .unwrap();
+        let host_identifier = fixture::host_identifier_factory(&fixture_lock_ports);
         let store = fixture_lock_ports.store.lock().unwrap();
         assert!(store.program_presence);
-        assert!(store.permissions.is_empty());
+        assert_eq!(store.permissions, BTreeSet::from([(1, host_identifier)]));
     }
 
     #[test]

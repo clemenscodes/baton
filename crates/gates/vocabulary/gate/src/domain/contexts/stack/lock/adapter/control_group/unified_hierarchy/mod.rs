@@ -119,6 +119,11 @@ impl StackLockAdapterControlGroupUnifiedHierarchyContext {
             let definition = "The path of a file of a cgroup in an error.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Try", "Enter", "Group"];
+            let definition = "To write the own process into the processes of a cgroup.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

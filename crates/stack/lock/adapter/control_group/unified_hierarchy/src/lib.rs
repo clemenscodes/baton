@@ -12,6 +12,7 @@ use std::fs;
 use std::io;
 use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
+use std::process;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ControlGroup {
@@ -71,6 +72,10 @@ impl ControlGroupPort for ControlGroup {
             .join(Self::PROCESSES_NAME);
         fs::write(&processes_path, process_identifier.to_string())
             .map_err(|error| Self::compose_error(processes_path.clone(), &error))
+    }
+
+    fn try_enter_group(&self, path_text: &str) -> Result<(), Error> {
+        self.try_move_process(path_text, process::id())
     }
 
     fn try_remove_group(&self, path_text: &str) -> Result<(), Error> {
@@ -187,6 +192,22 @@ mod tests {
 
         let processes_path = hierarchy_directory.join("baton/rtx3080/resolve/cgroup.procs");
         assert_eq!(fs::read_to_string(processes_path).unwrap(), "4242");
+        fs::remove_dir_all(hierarchy_directory).unwrap();
+    }
+
+    #[test]
+    fn an_entry_writes_the_own_process_into_the_processes_of_the_group() {
+        let hierarchy_directory = fixture::hierarchy_directory_factory("entry");
+        let control_group = fixture::control_group_factory(&hierarchy_directory);
+        control_group.try_create_group("/baton/host").unwrap();
+
+        control_group.try_enter_group("/baton/host").unwrap();
+
+        let processes_path = hierarchy_directory.join("baton/host/cgroup.procs");
+        assert_eq!(
+            fs::read_to_string(processes_path).unwrap(),
+            process::id().to_string()
+        );
         fs::remove_dir_all(hierarchy_directory).unwrap();
     }
 

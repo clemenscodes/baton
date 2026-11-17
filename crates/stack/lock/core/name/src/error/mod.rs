@@ -17,7 +17,7 @@ impl fmt::Display for Error {
         match self {
             Self::LockName { text } => write!(
                 formatter,
-                "`{text}` is no name of a lock, which holds only letters, digits, `_` and `-` and never begins with `-`."
+                "`{text}` is no name of a lock, which holds only letters, digits, `_` and `-`, never begins with `-` and is never `host`."
             ),
             Self::ApplicationName { text } => write!(
                 formatter,
@@ -49,7 +49,7 @@ mod tests {
         assert_eq!(
             text,
             [
-                "`--help` is no name of a lock, which holds only letters, digits, `_` and `-` and never begins with `-`.",
+                "`--help` is no name of a lock, which holds only letters, digits, `_` and `-`, never begins with `-` and is never `host`.",
                 "`a b` is no name of an application, which holds only letters, digits, `_` and `-` and never begins with `-`."
             ]
         );

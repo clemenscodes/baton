@@ -140,7 +140,14 @@ an update of a map, never a new program, and the lock is never open for a moment
 For an open the program finds the lock of the device file. A miss allows the open. On a hit it asks
 for the ancestor of the task at every level from 1 to a fixed depth, unrolled, and looks up each one
 with the lock in the map of the permissions. A hit allows the open, otherwise it is denied. The root
-cgroup, level 0, is never an owner, since it would permit every process. The program and its maps are
+cgroup, level 0, is never an owner, since it would permit every process.
+
+The helper is outside every lock too, so the programs it runs on a GPU, such as `nvidia-smi` for the
+persistence and the drain before and after a passthrough, would be denied like every other process.
+`enclose` therefore creates the cgroup of the helper, `/sys/fs/cgroup/baton/host`, and permits it for
+every lock beside its owner. The helper moves itself there before it runs such a program, and no other
+process ever lives there. That cgroup is never an owner and never an eligible application, and no lock
+is named `host`. `remove` revokes it for its lock, and the empty cgroup stays for the next `enclose`. The program and its maps are
 pinned in bpffs, so they live in the kernel with no process holding them, and a later run finds them
 again.
 
@@ -154,6 +161,12 @@ A lock names a device by its PCI address and covers every function of its slot, 
   function. Block devices are not scanned.
 - The file of `nvidia` of a GPU of the NVIDIA driver, which is not in sysfs, by the minor in
   `/proc/driver/nvidia/gpus/<address>/information`.
+
+Around a passthrough the map only grows. The bind adds the file of the group to the files of the
+driver, and the release adds the files the driver of the host brings back without deleting the file
+of the group, so a node that the driver creates again with its former number is locked the whole
+time. A plain `refresh` inserts the files it finds before it deletes the ones that are gone, so a
+refresh never opens a file for a moment, and it removes what a passthrough left behind.
 
 The device files of a device change. The card of DRM may be renumbered after a release from
 vfio-pci, and a device bound to vfio-pci has no file of its own beside the file of its group under
@@ -244,6 +257,31 @@ Every option is a flag with a variable beside it and a default.
 | `baton` | `--elevation-argument` | `BATON_ELEVATION_ARGUMENT` | `-n` |
 | `baton` | `--host-program` | `BATON_HOST_PROGRAM` | `baton_host` |
 
+## The module of NixOS
+
+The flake exports `nixosModules.default`, so a NixOS host wires baton declaratively and a module of
+another project runs its programs inside a lock. A host names its locks in `baton.locks`, each with
+the PCI address of its GPU, its eligible applications and an optional default owner.
+
+- A lock must stand before any service opens its GPU, or that service holds it and every acquisition
+  waits for it. A rule of udev therefore runs the enclosure of a lock when a driver other than
+  vfio-pci binds its GPU, both at the coldplug of the start and after every passthrough. The
+  enclosure encloses the GPU and admits its applications, or refreshes a lock that already stands.
+  udev hands an event to a program that listens only after every rule ran, so the lock stands before
+  any desktop or sound server hears of the GPU. The rule depends on udev, never on an init.
+- A second rule runs `baton_host refresh` whenever a node with a device file appears below the slot of
+  the GPU, so a node of a driver that probes late is locked before any program hears of it.
+- The activation admits an application that a rebuild adds to a lock that already stands.
+- The members of `baton.group` run `baton_host acquire`, `release` and `status` through sudo without a
+  password, and nothing else of the helper.
+- `baton.program` is the path of `baton`, wrapped with the paths of sudo and of `baton_host`. A module
+  of another project adds its application to `baton.locks.<lock>.applications` and starts its program
+  with `${config.baton.program} run --lock <lock> --application <application> -- <program>`.
+
+A daemon that holds a GPU for as long as it runs, such as `nvidia-persistenced`, is denied a locked GPU
+like every other process. The persistence of a locked NVIDIA GPU is therefore off unless its owner sets
+it.
+
 ## The tree
 
 baton has one family of the stack, `lock`, the mutex around a GPU. The product `baton` composes it
@@ -255,7 +293,7 @@ Every concept is a crate of its own below `crates/stack/lock/core`.
 
 | Crate | What it holds |
 |---|---|
-| `name` | `LockName`, the name of a lock, and `ApplicationName`, the name of an eligible application, both of letters, digits, `_` and `-` and never starting with `-` |
+| `name` | `LockName`, the name of a lock, and `ApplicationName`, the name of an eligible application, both of letters, digits, `_` and `-` and never starting with `-`, and a lock never named `host` |
 | `device/address` | `DeviceAddress`, the PCI address of a GPU, its domain, bus, slot and function, and the slot that holds every function of the card |
 | `device/file` | `DeviceFile`, the kind, the major and the minor of a device file of a GPU |
 | `graphics/user` | `GraphicsUser`, a process with its identifier and its command, or a console of the kernel with its number |
@@ -280,7 +318,7 @@ without a privilege.
 |---|---|
 | `DeviceProgram` | installs the device program at the root of the unified hierarchy once, finds it again in a later run, and writes the map of the devices and the map of the permissions |
 | `DeviceTree` | reads a GPU in sysfs, its functions, its device files, its consoles and its driver, unbinds and binds its consoles, and hands it to vfio-pci and back |
-| `ControlGroup` | creates and removes the cgroup of an application, reads its identifier and whether it is populated, and moves a process into it |
+| `ControlGroup` | creates and removes the cgroup of an application, reads its identifier and whether it is populated, moves a process into it, and moves the helper into its own cgroup |
 | `LockRecord` | loads and stores a lock under `/run`, lists the locks, and holds the records exclusively while a request changes them |
 | `TaskTable` | finds every process that holds a device file with its cgroup and its command, tells whether a process lives, and ends one with `SIGTERM` or `SIGKILL` |
 | `Pause` | waits one interval, so a wait is always an interval of an option, never a fixed wait |

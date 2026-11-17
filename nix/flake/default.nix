@@ -2,6 +2,8 @@
 {
   systems = [ "x86_64-linux" ];
 
+  flake.nixosModules.default = import ./modules/baton { inherit (inputs) self; };
+
   perSystem =
     { system, ... }:
     let
@@ -150,6 +152,7 @@
         outputNames =
           map (name: "${name} package") (pkgs.lib.attrNames packages)
           ++ map (name: "${name} shell") (pkgs.lib.attrNames devShells)
+          ++ map (name: "${name} module") (pkgs.lib.attrNames self.nixosModules)
           ++ [ "formatter formatter" ];
         cargo-llvm-cov = cargoLlvmCoverage;
       };

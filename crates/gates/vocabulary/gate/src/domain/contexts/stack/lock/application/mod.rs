@@ -641,6 +641,51 @@ impl StackLockApplicationContext {
             let definition = "To find the device files of the GPUs of a lock again, delete the files it no longer has from the map of the devices and insert the ones it has.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Host", "Identifier"];
+            let definition = "The identifier of the cgroup of the helper, which every lock permits.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Host", "Path", "Text"];
+            let definition = "The path of the cgroup of the helper, which every lock permits.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Try", "Enter", "Group"];
+            let definition = "To move the own process of the helper into a cgroup.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Try", "Enter", "Host"];
+            let definition = "To move the helper into its own cgroup, so the programs it runs reach the GPU of a lock.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Try", "Permit", "Host"];
+            let definition = "To create the cgroup of the helper and permit it for a lock.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Try", "Revoke", "Host"];
+            let definition = "To revoke the permission of the cgroup of the helper for a lock.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Stale", "Files"];
+            let definition = "The device files of a lock that a scan no longer finds, deleted from the map after the new ones are inserted.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Try", "Extend", "Device", "Files"];
+            let definition = "To add the device files a scan finds to a lock and to its map without deleting any, around a passthrough.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Try", "Scan", "Device", "Files"];
+            let definition = "To read the device files of every device of a lock.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

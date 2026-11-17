@@ -101,7 +101,7 @@ crates/
       adapter/host_helper/elevation_program    baton_host through sudo
       adapter/lock_record/file_system          the records under /run
       adapter/pause/standard_library           the pause of a check
-      adapter/program_runner/spawner           the program of a run
+      adapter/program_runner/spawner           the program of a run and the trap of its signals
       adapter/task_table/process_file_system   the processes under /proc and their signals
   products/
     baton/presentation/command_line_interface  the program baton without a privilege

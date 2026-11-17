@@ -47,7 +47,8 @@ open that GPU.
 2. A `run` of another eligible application waits and gets the GPU once the first ends, with a
    `--deadline` it fails and names the owner, and with `--force` it ends the owner and gets the GPU.
    Two waiting demands are served in their order. A `run` of an application that is not eligible is
-   refused, and a guard killed with `SIGKILL` lets the lock pass on.
+   refused, and a guard killed with `SIGKILL` lets the lock pass on. A guard ended with `SIGTERM`,
+   `SIGINT` or `SIGHUP` ends its program with `SIGTERM`, waits for it and releases the lock.
 3. A unit of a service manager with a device policy, a program started from a terminal multiplexer and
    a program a portal starts are all denied the GPU.
 4. A `run --passthrough` of a hypervisor binds the GPU to vfio-pci with no user outside its owner,

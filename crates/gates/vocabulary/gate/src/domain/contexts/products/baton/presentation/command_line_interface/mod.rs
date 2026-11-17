@@ -99,6 +99,11 @@ impl ProductsBatonPresentationCommandLineInterfaceContext {
             TermText::new(spelling, definition)
         },
         {
+            let spelling: &[&str] = &["Check", "Interval"];
+            let definition = "The time in milliseconds between two checks of the program of a run, in which the guard also forwards a trapped signal of an end to it.";
+            TermText::new(spelling, definition)
+        },
+        {
             let spelling: &[&str] = &["Guard", "Adapters"];
             let definition = "The host helper and the program runner the lock guard drives.";
             TermText::new(spelling, definition)

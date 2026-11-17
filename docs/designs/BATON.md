@@ -143,6 +143,14 @@ an update of a map, never a new program, and the lock is never open for a moment
   lock it belongs to.
 - The map of the permissions holds a key of the identifier of a cgroup and the lock.
 
+The kernel asks the program about the creation of a node, a read or a write of a device file, and the
+access it names holds the kind of the device in its low half and the bits of the access in its high
+half. The program governs only the opens, the read and the write, and allows every access that creates
+a node and never opens, since the kernel creates the nodes of devtmpfs from the root cgroup, so a lock
+on the creation would stop the driver of the host from bringing a device file back after a passthrough
+and would answer a `mknod` of the owner with a refusal. A lock governs the opens of a device, never the
+creation of its node.
+
 For an open the program finds the lock of the device file. A miss allows the open. On a hit it asks
 for the ancestor of the task at every level from 1 to a fixed depth, unrolled, and looks up each one
 with the lock in the map of the permissions. A hit allows the open, otherwise it is denied. The root
@@ -239,6 +247,20 @@ elevation program the host allows for exactly that helper.
   program as its child, waits for it and releases the lock when it ends, so the program and every
   child it starts use the GPU for exactly as long as the program runs. A guard that dies leaves an
   empty cgroup once its program ends, and the lock passes on as on a release.
+
+  The guard outlives its program. Its acquisition moves the guard into the cgroup of its
+  application, so a supervisor that stops it, such as a service manager whose unit starts
+  `baton run`, reaches the guard as its main process and never the program, since both left the
+  cgroup of the unit for the cgroup of the application. A terminal that sends an interrupt or a
+  hangup reaches the guard as well. The guard therefore traps `SIGTERM`, `SIGINT` and `SIGHUP` from
+  just before its program starts until the program ended. It checks its program every interval of
+  `--check-interval`, never with a fixed wait, and once one of those signals arrived it forwards it
+  to the program as `SIGTERM`, a request to end and never a kill, keeps waiting, and releases the
+  lock as on every end. Every further signal is forwarded again. The exit code of the guard stays
+  the one of its program, and a program a signal ended is reported as before. Once the program ended
+  the trap is lifted, so a signal during the release runs its default action. A program that
+  survives its request to end keeps the guard waiting, and a `SIGKILL` of the guard still leaves it
+  running.
 - `status` prints what `baton_host status` prints.
 
 The host runs `enclose` for every GPU it locks and `admit` for each of its eligible applications once
@@ -262,6 +284,7 @@ Every option is a flag with a variable beside it and a default.
 | `baton` | `--elevation-program` | `BATON_ELEVATION_PROGRAM` | `sudo` |
 | `baton` | `--elevation-argument` | `BATON_ELEVATION_ARGUMENT` | `-n` |
 | `baton` | `--host-program` | `BATON_HOST_PROGRAM` | `baton_host` |
+| `baton` | `--check-interval` | `BATON_CHECK_INTERVAL` | 200 ms, the time between two checks of the program of a run |
 
 ## The module of NixOS
 
@@ -330,7 +353,7 @@ without a privilege.
 | `TaskTable` | finds every process that holds a device file with its cgroup and its command, tells whether a process lives, and ends one with `SIGTERM` or `SIGKILL` |
 | `Pause` | waits one interval, so a wait is always an interval of an option, never a fixed wait |
 | `HostHelper` | runs `baton_host` with a request through the elevation program, for the program without a privilege |
-| `ProgramRunner` | starts the program of a run as a child and waits for its end |
+| `ProgramRunner` | starts the program of a run as a child, forwards a signal that ends the guard to it and waits for its end |
 
 ### The adapters
 
@@ -345,7 +368,7 @@ Every adapter is named for its port and its technology below `crates/stack/lock/
 | `task_table/process_file_system` | the descriptors, the cgroups and the commands under `/proc`, and the signals through rustix |
 | `pause/standard_library` | `std::thread::sleep` |
 | `host_helper/elevation_program` | the spawner of a process with the elevation program, `sudo -n` unless the option names another |
-| `program_runner/spawner` | the spawner of a process |
+| `program_runner/spawner` | the spawner of a process, and the trap of the signals of an end through the safe API of the crate `signal-hook` |
 
 ### The product
 

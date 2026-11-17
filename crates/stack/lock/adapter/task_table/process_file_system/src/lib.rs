@@ -71,11 +71,14 @@ impl<SignalCallType: SignalCall> TaskTablePort for TaskTable<SignalCallType> {
                 let holder_presence = Self::check_holder(&process_path, device_files);
                 holder_presence.then(|| {
                     let command_text = Self::read_text(&process_path.join(Self::COMMAND_NAME));
-                    let group_text = Self::read_text(&process_path.join(Self::GROUP_NAME));
+                    let group_text = fs::read_to_string(process_path.join(Self::GROUP_NAME))
+                        .unwrap_or_default();
                     let control_group_text = String::from(
                         group_text
-                            .strip_prefix(Self::GROUP_PREFIX)
-                            .unwrap_or_default(),
+                            .lines()
+                            .find_map(|group_line| group_line.strip_prefix(Self::GROUP_PREFIX))
+                            .unwrap_or_default()
+                            .trim(),
                     );
                     GraphicsUser::ProcessUser {
                         process_identifier,
@@ -232,7 +235,7 @@ mod tests {
             &task_directory,
             42,
             "resolve",
-            "0::/baton/rtx3080/resolve",
+            "1:net_cls:/\n0::/baton/rtx3080/resolve",
             &["/dev/null", "/dev/zero"],
         );
         fixture::process_factory(

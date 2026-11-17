@@ -208,6 +208,11 @@ impl StackLockAdapterTaskTableProcessFileSystemContext {
             let definition = "The signal of rustix a system signal sends.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Group", "Line"];
+            let definition = "One line of the file cgroup of a process, of which the one of the unified hierarchy begins with 0::.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

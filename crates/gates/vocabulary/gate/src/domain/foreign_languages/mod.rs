@@ -33,6 +33,7 @@ mod rustix;
 mod rusty_object_notation;
 mod secure_hash_algorithm2;
 pub(super) mod serde;
+mod signal_hook;
 mod softbuffer;
 pub(super) mod standard_library;
 mod structured_query_language_extension;

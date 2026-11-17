@@ -4,6 +4,7 @@
 |---|---|
 | Application | The name of the eligible application a run acquires the lock for. |
 | Arguments | The arguments of the program baton, its options and its request. |
+| Check Interval | The time in milliseconds between two checks of the program of a run, in which the guard also forwards a trapped signal of an end to it. |
 | Command Line | The command line of the program baton, which composes the lock guard from its arguments and answers the request. |
 | Deadline | The time in milliseconds a run waits for the GPU at most. |
 | Elevation Argument | An argument of the elevation program in front of baton_host, -n by default so sudo never asks for a password. |

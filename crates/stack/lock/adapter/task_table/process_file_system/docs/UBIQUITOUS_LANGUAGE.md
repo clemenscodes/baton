@@ -12,6 +12,7 @@
 | Entries | The entries of a directory under /proc. |
 | Entry | An entry of a directory under /proc. |
 | File Type | The type of the file an open descriptor points to. |
+| Group Line | One line of the file cgroup of a process, of which the one of the unified hierarchy begins with 0::. |
 | Group Name | The name cgroup of the file of the cgroup of a process. |
 | Group Prefix | The prefix 0:: of the line of the unified hierarchy in the file cgroup of a process. |
 | Group Text | The line of the file cgroup of a process. |

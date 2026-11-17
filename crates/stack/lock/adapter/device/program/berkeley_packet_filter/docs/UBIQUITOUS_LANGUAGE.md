@@ -73,6 +73,7 @@
 | Object | A pinned map or program the adapter fastens or opens at a path of bpffs. |
 | Offset | The offset of an instruction, from the base of a register or to a jump. |
 | Offset Bytes | The two bytes of the offset of an instruction. |
+| Open Mask | The mask that keeps the opens of a device, its read and its write, out of the access type, so a device program allows the creation of a node of a locked device and governs only its opens. |
 | Operand | The immediate operand of an instruction. |
 | Operand Bytes | The four bytes of the operand of an instruction. |
 | Operation | The operation byte of an instruction. |

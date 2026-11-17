@@ -77,6 +77,7 @@ impl StandardLibrary {
         "as_ptr",
         "atan",
         "atan2",
+        "AtomicBool",
         "AtomicI32",
         "AtomicU64",
         "binary_search",

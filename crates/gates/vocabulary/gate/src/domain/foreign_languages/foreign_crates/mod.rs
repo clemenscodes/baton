@@ -36,6 +36,7 @@ use crate::domain::foreign_languages::rusty_object_notation::RustyObjectNotation
 use crate::domain::foreign_languages::secure_hash_algorithm2::SecureHashAlgorithm2;
 use crate::domain::foreign_languages::serde::Serde;
 use crate::domain::foreign_languages::serde::java_script_object_notation::SerdeJavaScriptObjectNotation;
+use crate::domain::foreign_languages::signal_hook::SignalHook;
 use crate::domain::foreign_languages::softbuffer::Softbuffer;
 use crate::domain::foreign_languages::standard_library::StandardLibrary;
 use crate::domain::foreign_languages::structured_query_language_extension::StructuredQueryLanguageExtension;
@@ -163,6 +164,7 @@ impl ForeignCrates {
         let toms_obvious_minimal_language = TomsObviousMinimalLanguage;
         let image = Image;
         let rustix = Rustix;
+        let signal_hook = SignalHook;
         let berkeley_packet_filter = BerkeleyPacketFilter;
         let secure_hash_algorithm2 = SecureHashAlgorithm2;
         let ureq = Ureq;
@@ -174,6 +176,7 @@ impl ForeignCrates {
             ForeignLanguage::try_from(toms_obvious_minimal_language),
             ForeignLanguage::try_from(image),
             ForeignLanguage::try_from(rustix),
+            ForeignLanguage::try_from(signal_hook),
             ForeignLanguage::try_from(berkeley_packet_filter),
             ForeignLanguage::try_from(secure_hash_algorithm2),
             ForeignLanguage::try_from(ureq),

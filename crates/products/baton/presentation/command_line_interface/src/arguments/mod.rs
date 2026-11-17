@@ -34,6 +34,13 @@ pub(crate) struct Arguments {
         help = "The path of baton_host"
     )]
     host_program: PathBuf,
+    #[arg(
+        long,
+        env = "BATON_CHECK_INTERVAL",
+        default_value_t = 200,
+        help = "The milliseconds between two checks of the program of a run"
+    )]
+    check_interval: u64,
     #[command(subcommand)]
     request: Request,
 }
@@ -53,6 +60,10 @@ impl Arguments {
 
     pub(crate) fn host_program(&self) -> &Path {
         &self.host_program
+    }
+
+    pub(crate) fn check_interval(&self) -> u64 {
+        self.check_interval
     }
 
     pub(crate) fn request(&self) -> &Request {
@@ -82,6 +93,7 @@ mod tests {
         assert_eq!(arguments.elevation_program(), Path::new("sudo"));
         assert_eq!(arguments.elevation_argument(), ["-n"]);
         assert_eq!(arguments.host_program(), Path::new("baton_host"));
+        assert_eq!(arguments.check_interval(), 200);
         assert_eq!(
             arguments.request(),
             &Request::Run {

@@ -5,7 +5,7 @@ use stack_domain_driven_design_core::command::SynchronousCommandHandler;
 use stack_domain_driven_design_core::layer::{Layer, PresentationLayer};
 use stack_domain_driven_design_core::query::SynchronousQueryHandler;
 use stack_lock_adapter_host_helper_elevation_program::{HelperConfiguration, HostHelper};
-use stack_lock_adapter_program_runner_spawner::ProgramRunner;
+use stack_lock_adapter_program_runner_spawner::{ProgramRunner, RunnerConfiguration};
 use stack_lock_application::acquisition::mode::AcquisitionMode;
 use stack_lock_application::guard_run::GuardRun;
 use stack_lock_application::host_helper::HostHelper as HostHelperPort;
@@ -35,15 +35,16 @@ impl From<Arguments> for CommandLine {
 impl CommandLine {
     const FAILURE_CODE: u8 = 1;
 
-    pub(crate) fn try_respond_exit_code<SpawnerType>(
+    pub(crate) fn try_respond_exit_code<SpawnerType, SignalTrapType>(
         &self,
         (helper_spawner, runner_spawner): (SpawnerType, SpawnerType),
+        signal_trap: SignalTrapType,
         mut output: impl Write,
         mut errors: impl Write,
     ) -> io::Result<ExitCode>
     where
         HostHelper<SpawnerType>: HostHelperPort,
-        ProgramRunner<SpawnerType>: ProgramRunnerPort,
+        ProgramRunner<SpawnerType, SignalTrapType>: ProgramRunnerPort,
     {
         let elevation_program = OsString::from(self.arguments.elevation_program());
         let elevation_arguments = Vec::from_iter(
@@ -59,7 +60,13 @@ impl CommandLine {
             host_program,
         ));
         let host_helper = HostHelper::from((helper_configuration, helper_spawner));
-        let program_runner = ProgramRunner::from(runner_spawner);
+        let check_interval = Duration::from_millis(self.arguments.check_interval());
+        let runner_configuration = RunnerConfiguration::from(check_interval);
+        let program_runner = ProgramRunner::from((
+            runner_configuration,
+            runner_spawner,
+            signal_trap,
+        ));
         let guard_adapters = GuardAdapters::from((host_helper, program_runner));
         let lock_guard = LockGuard::from(guard_adapters);
         match self.arguments.request() {
@@ -114,6 +121,7 @@ impl CommandLine {
 mod tests {
     use super::*;
     use clap::Parser;
+    use stack_lock_adapter_program_runner_spawner::SystemTrap;
     use stack_process_core_invocation::Completion;
 
     mod fixture {
@@ -172,7 +180,12 @@ mod tests {
         let mut errors = Vec::new();
 
         let exit_code = command_line
-            .try_respond_exit_code((helper_spawner, runner_spawner), &mut output, &mut errors)
+            .try_respond_exit_code(
+                (helper_spawner, runner_spawner),
+                SystemTrap::from(()),
+                &mut output,
+                &mut errors,
+            )
             .unwrap();
 
         assert_eq!(exit_code, ExitCode::from(3));
@@ -199,6 +212,7 @@ mod tests {
                     fixture::spawner_factory(Vec::new()),
                     fixture::spawner_factory(vec![fixture::failure_factory(Some(300))]),
                 ),
+                SystemTrap::from(()),
                 &mut output,
                 &mut errors,
             ),
@@ -207,6 +221,7 @@ mod tests {
                     fixture::spawner_factory(vec![fixture::failure_factory(Some(1))]),
                     fixture::spawner_factory(Vec::new()),
                 ),
+                SystemTrap::from(()),
                 &mut output,
                 &mut errors,
             ),
@@ -236,6 +251,7 @@ mod tests {
                     fixture::spawner_factory(vec![status_output]),
                     fixture::spawner_factory(Vec::new()),
                 ),
+                SystemTrap::from(()),
                 &mut output,
                 &mut errors,
             ),
@@ -244,6 +260,7 @@ mod tests {
                     fixture::spawner_factory(vec![None]),
                     fixture::spawner_factory(Vec::new()),
                 ),
+                SystemTrap::from(()),
                 &mut output,
                 &mut errors,
             ),
@@ -283,6 +300,7 @@ mod tests {
                         fixture::spawner_factory(vec![fixture::failure_factory(Some(1))]),
                         fixture::spawner_factory(Vec::new()),
                     ),
+                    SystemTrap::from(()),
                     Vec::new(),
                     fixture::FixtureOutput,
                 )
@@ -293,6 +311,7 @@ mod tests {
                         fixture::spawner_factory(vec![status_output]),
                         fixture::spawner_factory(Vec::new()),
                     ),
+                    SystemTrap::from(()),
                     fixture::FixtureOutput,
                     Vec::new(),
                 )
@@ -303,6 +322,7 @@ mod tests {
                         fixture::spawner_factory(vec![None]),
                         fixture::spawner_factory(Vec::new()),
                     ),
+                    SystemTrap::from(()),
                     Vec::new(),
                     fixture::FixtureOutput,
                 )

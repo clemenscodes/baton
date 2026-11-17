@@ -130,6 +130,7 @@
 | Serde Java Script Object Notation | The foreign language of the crate serde_json, which reads the JavaScript Object Notation into a structure of serde. |
 | Session | The module of the context of the crate stack_game_core_session, beneath the module of the game. |
 | Shared Kernel | The module of the contexts of the crates of the game that every bounded context shares, such as the physics, the key and the content. |
+| Signal Hook | The foreign language of the crate signal-hook, which traps the signals of an end for the guard of a run. |
 | Softbuffer | The foreign language of the crate softbuffer, with which the live tests of the crate stack_engine_adapter_window_winit fill the window with pixels, so a Wayland compositor shows it. |
 | Source | The module of the contexts of the crates under crates/stack/game/adapter/content/source, which fill the port of stack_game_adapter_content_ron where a package of the content comes from, and of the crates under crates/stack/engine/adapter/assets/source, which fill the port of stack_engine_adapter_assets_serious_engine where the files of the reference assets come from. |
 | Span | The module of the context of the crate gates_coverage_core_span, beneath the module of the core of the coverage. |

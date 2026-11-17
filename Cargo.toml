@@ -70,6 +70,7 @@ name = "baton"
 [workspace.dependencies]
 berkeley_packet_filter = { git = "https://github.com/clemenscodes/berkeley_packet_filter", rev = "8143aca9c24114cb0d9f5eb9f49e212d0a5625c9" }
 rustix = { version = "=1.1.2", features = ["fs", "process", "std"] }
+signal-hook = { version = "=0.4.6", default-features = false }
 clap = { version = "=4.6.6", features = ["derive", "env", "string"] }
 proc-macro2 = { version = "=1.0.107", default-features = false, features = ["span-locations"] }
 serde = { version = "=1.0.229", features = ["derive"] }

@@ -816,6 +816,11 @@ impl GatesVocabularyGateContext {
             TermText::new(spelling, definition)
         },
         {
+            let spelling: &[&str] = &["Signal", "Hook"];
+            let definition = "The foreign language of the crate signal-hook, which traps the signals of an end for the guard of a run.";
+            TermText::new(spelling, definition)
+        },
+        {
             let spelling: &[&str] = &["Stack", "Lock", "Adapter", "Pause", "Standard", "Library"];
             let definition = "The context of the crate stack_lock_adapter_pause_standard_library.";
             TermText::new(spelling, definition)

@@ -220,6 +220,11 @@ impl StackLockAdapterDeviceProgramBerkeleyPacketFilterContext {
             TermText::new(spelling, definition)
         },
         {
+            let spelling: &[&str] = &["Open", "Mask"];
+            let definition = "The mask that keeps the opens of a device, its read and its write, out of the access type, so a device program allows the creation of a node of a locked device and governs only its opens.";
+            TermText::new(spelling, definition)
+        },
+        {
             let spelling: &[&str] = &["Device", "Key", "Offset"];
             let definition = "The offset of the key of a device on the stack.";
             TermText::new(spelling, definition)

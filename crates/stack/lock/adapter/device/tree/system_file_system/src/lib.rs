@@ -228,6 +228,16 @@ impl<SpawnerType: Spawner> DeviceTreePort for DeviceTree<SpawnerType> {
         Ok(persistence_presence)
     }
 
+    fn check_identity_presence(&self, device_file: &DeviceFile) -> bool {
+        let identity_directory = match device_file.device_kind() {
+            DeviceKind::CharacterDevice => Self::CHARACTER_IDENTITY_DIRECTORY,
+            DeviceKind::BlockDevice => Self::BLOCK_IDENTITY_DIRECTORY,
+        };
+        self.compose_system_path(identity_directory)
+            .join(format!("{}:{}", device_file.major(), device_file.minor()))
+            .exists()
+    }
+
     fn try_release_passthrough(
         &self,
         device_address: &DeviceAddress,
@@ -248,6 +258,8 @@ impl<SpawnerType: Spawner> DeviceTreePort for DeviceTree<SpawnerType> {
 
 impl<SpawnerType: Spawner> DeviceTree<SpawnerType> {
     const DEVICE_DIRECTORY: &'static str = "sys/bus/pci/devices";
+    const CHARACTER_IDENTITY_DIRECTORY: &'static str = "sys/dev/char";
+    const BLOCK_IDENTITY_DIRECTORY: &'static str = "sys/dev/block";
     const DRIVER_DIRECTORY: &'static str = "sys/bus/pci/drivers";
     const PROBE_FILE: &'static str = "sys/bus/pci/drivers_probe";
     const NVIDIA_DIRECTORY: &'static str = "proc/driver/nvidia/gpus";
@@ -749,6 +761,29 @@ mod tests {
                 address_text: String::from("0000:05:00.0")
             })
         );
+        fs::remove_dir_all(system_directory).unwrap();
+    }
+
+    #[test]
+    fn an_identity_is_present_while_a_device_of_the_system_holds_it() {
+        let system_directory = fixture::system_directory_factory("numbers");
+        let device_tree = fixture::device_tree_factory(
+            &system_directory,
+            Vec::new(),
+            Duration::from_secs(1),
+        );
+        fs::create_dir_all(system_directory.join("sys/dev/char/13:84")).unwrap();
+        fs::create_dir_all(system_directory.join("sys/dev/block/8:0")).unwrap();
+
+        let presence = [
+            DeviceFile::from((DeviceKind::CharacterDevice, 13, 84)),
+            DeviceFile::from((DeviceKind::CharacterDevice, 13, 86)),
+            DeviceFile::from((DeviceKind::BlockDevice, 8, 0)),
+            DeviceFile::from((DeviceKind::BlockDevice, 13, 84)),
+        ]
+        .map(|device_file| device_tree.check_identity_presence(&device_file));
+
+        assert_eq!(presence, [true, false, true, false]);
         fs::remove_dir_all(system_directory).unwrap();
     }
 

@@ -716,6 +716,11 @@ impl StackLockApplicationContext {
             let definition = "The processes that hold the GPU outside the application and outside a yielding owner, for which an acquisition without --force waits.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Check", "Identity", "Presence"];
+            let definition = "To tell whether a device of the system holds the number of a device file now, so a refresh deletes it only then.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

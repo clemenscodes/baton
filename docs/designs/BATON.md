@@ -179,8 +179,11 @@ A lock names a device by its PCI address and covers every function of its slot, 
 Around a passthrough the map only grows. The bind adds the file of the group to the files of the
 driver, and the release adds the files the driver of the host brings back without deleting the file
 of the group, so a node that the driver creates again with its former number is locked the whole
-time. A plain `refresh` inserts the files it finds before it deletes the ones that are gone, so a
-refresh never opens a file for a moment, and it removes what a passthrough left behind.
+time. A plain `refresh` inserts the files it finds before it deletes any, so a refresh never opens a file
+for a moment. It deletes a file it no longer finds only once another device of the system holds its
+number, which `sys/dev/char` and `sys/dev/block` name, and keeps every other number locked. A node a
+driver creates while it probes, after a passthrough or at any other time, so stays locked even when
+a refresh runs before the node appears, and a program that watches `/dev` never opens it first.
 
 The device files of a device change. The card of DRM may be renumbered after a release from
 vfio-pci, and a device bound to vfio-pci has no file of its own beside the file of its group under

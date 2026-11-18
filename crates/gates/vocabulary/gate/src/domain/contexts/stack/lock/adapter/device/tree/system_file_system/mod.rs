@@ -648,6 +648,26 @@ impl StackLockAdapterDeviceTreeSystemFileSystemContext {
             let definition = "The path of a file of sysfs.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Check", "Identity", "Presence"];
+            let definition = "To tell whether sys/dev holds the number of a device file, so a device of the system holds it now.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Character", "Identity", "Directory"];
+            let definition = "The directory sys/dev/char, which holds a link for the number of every character device.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Block", "Identity", "Directory"];
+            let definition = "The directory sys/dev/block, which holds a link for the number of every block device.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Identity", "Directory"];
+            let definition = "The directory of the numbers of the kind of a device file.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

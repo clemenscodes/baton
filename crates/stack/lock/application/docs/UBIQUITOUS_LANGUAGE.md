@@ -8,6 +8,7 @@
 | Address Files | The device files of one GPU of a lock. |
 | Administration | The lock administration and its steps. |
 | Admission | The command that makes an application eligible for a lock, as its default owner where asked, and creates its cgroup. |
+| Check Identity Presence | To tell whether a device of the system holds the number of a device file now, so a refresh deletes it only then. |
 | Check Interval | The interval between two checks of a wait. |
 | Check Process Presence | To tell whether a process of the host still lives. |
 | Check Survival | To tell whether a process that was asked to end still lives. |

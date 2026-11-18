@@ -9,10 +9,13 @@
 | Bind Presence | The text 1 of a bound console and of a boot device. |
 | Bind Text | The text of the file bind of a virtual console. |
 | Binding Deadline | The time a write to sysfs and a change of a driver have at most. |
+| Block Identity Directory | The directory sys/dev/block, which holds a link for the number of every block device. |
 | Boot Name | The name boot_vga of the file that tells whether a GPU is the one the firmware drew on. |
 | Boot Path | The file boot_vga of a function. |
 | Boot Presence | Whether a function of a GPU is the one the firmware drew on. |
 | Bridge Class | The class 0x0604 of a PCI bridge, which is never passed through. |
+| Character Identity Directory | The directory sys/dev/char, which holds a link for the number of every character device. |
+| Check Identity Presence | To tell whether sys/dev holds the number of a device file, so a device of the system holds it now. |
 | Class Text | The class of a PCI function. |
 | Command Text | The command of a program as a text in an error. |
 | Completion Failure | The error of a program that ended without success. |
@@ -64,6 +67,7 @@
 | Group Name | The number of the IOMMU group of a function. |
 | Group Path | The file of the group of vfio of a function. |
 | Group Target | The target of the link iommu_group of a function. |
+| Identity Directory | The directory of the numbers of the kind of a device file. |
 | Index Text | The index of a virtual console as a text. |
 | Information Name | The name information of the file of a GPU of the NVIDIA driver. |
 | Information Path | The file of the information of a GPU of the NVIDIA driver. |

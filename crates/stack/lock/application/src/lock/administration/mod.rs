@@ -522,17 +522,23 @@ impl<PortsType: LockPorts> LockAdministration<PortsType> {
     }
 
     fn try_update_device_files(&self, graphics_lock: &mut GraphicsLock) -> Result<(), Error> {
-        let device_files = self.try_scan_device_files(graphics_lock)?;
+        let mut device_files = self.try_scan_device_files(graphics_lock)?;
+        let device_tree = self.lock_ports.device_tree();
+        let mut stale_files = Vec::new();
+        for device_file in graphics_lock.device_files() {
+            if device_files.contains(device_file) {
+                continue;
+            }
+            match device_tree.check_identity_presence(device_file) {
+                true => stale_files.push(*device_file),
+                false => device_files.push(*device_file),
+            }
+        }
         let device_program = self.lock_ports.device_program();
         device_program
             .try_insert_device_files(graphics_lock.map_index(), &device_files)
             .map_err(Self::compose_program_error)?;
-        let previous_files = graphics_lock.replace_device_files(device_files);
-        let stale_files = Vec::from_iter(
-            previous_files
-                .into_iter()
-                .filter(|device_file| !graphics_lock.device_files().contains(device_file)),
-        );
+        graphics_lock.replace_device_files(device_files);
         device_program
             .try_delete_device_files(&stale_files)
             .map_err(Self::compose_program_error)
@@ -785,6 +791,7 @@ mod tests {
             pub(crate) console_users: Vec<GraphicsUser>,
             pub(crate) record_console_users: Vec<GraphicsUser>,
             pub(crate) address_files: Vec<DeviceFile>,
+            pub(crate) stale_files: Vec<DeviceFile>,
             pub(crate) device_addresses: BTreeSet<DeviceAddress>,
             pub(crate) device_persistence: bool,
             pub(crate) persistence_presence: Vec<bool>,
@@ -970,6 +977,10 @@ mod tests {
                 let mut store = self.store.lock().unwrap();
                 store.device_addresses.insert(*device_address);
                 Ok(store.device_persistence)
+            }
+
+            fn check_identity_presence(&self, device_file: &DeviceFile) -> bool {
+                self.store.lock().unwrap().stale_files.contains(device_file)
             }
 
             fn try_release_passthrough(
@@ -1882,6 +1893,7 @@ mod tests {
         let graphics_lock = fixture::graphics_lock_factory(&fixture_lock_ports);
         assert!(!graphics_lock.passthrough_presence());
         assert_eq!(graphics_lock.device_files(), &device_files);
+        fixture_lock_ports.store.lock().unwrap().stale_files = vec![device_file];
         lock_administration.dispatch_command(Refresh).unwrap();
         let graphics_lock = fixture::graphics_lock_factory(&fixture_lock_ports);
         assert_eq!(
@@ -2013,19 +2025,23 @@ mod tests {
     }
 
     #[test]
-    fn a_refresh_locks_the_files_a_gpu_has_now() {
+    fn a_refresh_locks_the_files_a_gpu_has_now_and_keeps_an_identity_no_other_device_took() {
         let fixture_lock_ports = fixture::lock_ports_factory();
         let lock_administration = fixture::enclosure_factory(&fixture_lock_ports);
-        fixture_lock_ports.store.lock().unwrap().address_files = vec![
-            fixture::device_file_factory(3),
-        ];
+        let mut store = fixture_lock_ports.store.lock().unwrap();
+        store.address_files = vec![fixture::device_file_factory(3)];
+        store.stale_files = vec![fixture::device_file_factory(1)];
+        drop(store);
 
         lock_administration.dispatch_command(Refresh).unwrap();
 
         let store = fixture_lock_ports.store.lock().unwrap();
         assert_eq!(
             store.device_files.keys().copied().collect::<Vec<_>>(),
-            [fixture::device_file_factory(3)]
+            [
+                fixture::device_file_factory(2),
+                fixture::device_file_factory(3)
+            ]
         );
     }
 

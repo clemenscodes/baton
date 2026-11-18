@@ -21,6 +21,8 @@ pub trait DeviceTree: DrivenPort {
 
     fn try_bind_console_user(&self, console_user: &GraphicsUser) -> Result<(), Self::Error>;
 
+    fn check_identity_presence(&self, device_file: &DeviceFile) -> bool;
+
     fn try_bind_passthrough(&self, device_address: &DeviceAddress) -> Result<bool, Self::Error>;
 
     fn try_release_passthrough(

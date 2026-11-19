@@ -270,6 +270,8 @@ impl<SpawnerType: Spawner> DeviceTree<SpawnerType> {
     const GRAPHICS_NAME: &'static str = "graphics";
     const BOOT_NAME: &'static str = "boot_vga";
     const DEV_NAME: &'static str = "dev";
+    const SUBSYSTEM_NAME: &'static str = "subsystem";
+    const INPUT_SUBSYSTEM: &'static str = "input";
     const NAME_FILE: &'static str = "name";
     const BIND_FILE: &'static str = "bind";
     const UNBIND_FILE: &'static str = "unbind";
@@ -331,6 +333,9 @@ impl<SpawnerType: Spawner> DeviceTree<SpawnerType> {
             let entry_path = entry.path();
             let directory_presence = entry.file_type().is_ok_and(|file_type| file_type.is_dir());
             if directory_presence {
+                if Self::check_input_presence(&entry_path) {
+                    continue;
+                }
                 Self::scan_device_files(&entry_path, device_files);
             } else if entry.file_name() == Self::DEV_NAME {
                 let dev_text = Self::read_text(&entry_path);
@@ -348,6 +353,11 @@ impl<SpawnerType: Spawner> DeviceTree<SpawnerType> {
                 device_files.extend(maybe_device_file);
             }
         }
+    }
+
+    fn check_input_presence(directory_path: &Path) -> bool {
+        fs::read_link(directory_path.join(Self::SUBSYSTEM_NAME))
+            .is_ok_and(|subsystem_path| subsystem_path.ends_with(Self::INPUT_SUBSYSTEM))
     }
 
     fn try_read_slot_functions(
@@ -618,6 +628,20 @@ mod tests {
             let function_path = device_directory.join("0000:03:00.1/sound/card7/controlC7");
             fs::create_dir_all(&function_path).unwrap();
             fs::write(function_path.join("dev"), "116:7\n").unwrap();
+            let directory_path = device_directory.join("0000:03:00.1/sound/card7/input21");
+            let event_path = directory_path.join("event29");
+            fs::create_dir_all(&event_path).unwrap();
+            fs::write(event_path.join("dev"), "13:93\n").unwrap();
+            symlink(
+                "../../../../../../class/input",
+                directory_path.join("subsystem"),
+            )
+            .unwrap();
+            symlink(
+                "../../../../../../../class/input",
+                event_path.join("subsystem"),
+            )
+            .unwrap();
             let other_path = device_directory.join("0000:04:00.0/drm/card1");
             fs::create_dir_all(&other_path).unwrap();
             fs::write(other_path.join("dev"), "226:1\n").unwrap();
@@ -733,7 +757,8 @@ mod tests {
     }
 
     #[test]
-    fn the_device_files_of_a_gpu_are_every_dev_of_its_slot_and_its_file_of_nvidia() {
+    fn the_device_files_of_a_gpu_are_every_dev_of_its_slot_but_its_input_devices_and_its_file_of_nvidia()
+     {
         let system_directory = fixture::system_directory_factory("files");
         let device_tree = fixture::device_tree_factory(
             &system_directory,

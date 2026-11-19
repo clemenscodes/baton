@@ -668,6 +668,26 @@ impl StackLockAdapterDeviceTreeSystemFileSystemContext {
             let definition = "The directory of the numbers of the kind of a device file.";
             TermText::new(spelling, definition)
         },
+        {
+            let spelling: &[&str] = &["Check", "Input", "Presence"];
+            let definition = "Whether a directory of sysfs is a device of the class input, such as a jack of the outputs of a GPU, whose holders never use the GPU.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Input", "Subsystem"];
+            let definition = "The class input of the kernel, the end of the link subsystem of an input device.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Subsystem", "Name"];
+            let definition = "The name of the link subsystem of a directory of sysfs.";
+            TermText::new(spelling, definition)
+        },
+        {
+            let spelling: &[&str] = &["Subsystem", "Path"];
+            let definition = "The target of the link subsystem of a directory of sysfs.";
+            TermText::new(spelling, definition)
+        },
     ];
 }
 

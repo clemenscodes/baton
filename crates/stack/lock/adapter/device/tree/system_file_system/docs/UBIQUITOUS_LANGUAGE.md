@@ -16,6 +16,7 @@
 | Bridge Class | The class 0x0604 of a PCI bridge, which is never passed through. |
 | Character Identity Directory | The directory sys/dev/char, which holds a link for the number of every character device. |
 | Check Identity Presence | To tell whether sys/dev holds the number of a device file, so a device of the system holds it now. |
+| Check Input Presence | Whether a directory of sysfs is a device of the class input, such as a jack of the outputs of a GPU, whose holders never use the GPU. |
 | Class Text | The class of a PCI function. |
 | Command Text | The command of a program as a text in an error. |
 | Completion Failure | The error of a program that ended without success. |
@@ -72,6 +73,7 @@
 | Information Name | The name information of the file of a GPU of the NVIDIA driver. |
 | Information Path | The file of the information of a GPU of the NVIDIA driver. |
 | Information Text | The text of the information of a GPU of the NVIDIA driver. |
+| Input Subsystem | The class input of the kernel, the end of the link subsystem of an input device. |
 | Line | A line of the information of a GPU of the NVIDIA driver. |
 | Mapping Presence | Whether a virtual console is drawn on a framebuffer of the GPU. |
 | Mapping Text | The answer of the console program for one virtual console. |
@@ -111,6 +113,8 @@
 | Start Failure | The error of a program that could not be started. |
 | Start Instant | The moment a wait for the driver of a function began. |
 | Status | The exit status of a program as the operating system reports it. |
+| Subsystem Name | The name of the link subsystem of a directory of sysfs. |
+| Subsystem Path | The target of the link subsystem of a directory of sysfs. |
 | System Directory | The root below which sys, proc and dev are read, / unless an option names another. |
 | Tree Configuration | The root of the system, the console program, the persistence program, the deadline of a binding and the interval of a check. |
 | Try Check Console Map | To ask the console program whether a virtual console is drawn on one of the framebuffers of a GPU. |

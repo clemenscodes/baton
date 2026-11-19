@@ -172,7 +172,11 @@ A lock names a device by its PCI address and covers every function of its slot, 
 
 - Every node with a file `dev` below `/sys/bus/pci/devices/<address>`, such as the card and the
   render node of DRM, a framebuffer, the adapters of I2C and the devices of ALSA of the audio
-  function. Block devices are not scanned.
+  function. Block devices are not scanned, and neither is a node of the class `input`, found by the
+  link `subsystem` of its directory. Such a node only reports a cable plugged into an output of the
+  audio function, and every watcher of input devices, acpid, logind or xremap, opens it without ever
+  using the GPU. On 2026-11-19 acpid held the jacks of an RTX 3080 that the driver had just brought
+  back, and a passthrough waited for it without end.
 - The file of `nvidia` of a GPU of the NVIDIA driver, which is not in sysfs, by the minor in
   `/proc/driver/nvidia/gpus/<address>/information`.
 
